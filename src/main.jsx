@@ -645,13 +645,13 @@ function HanglightApp() {
     return (
       <div style={{
         minHeight: '100vh',
-        backgroundColor: '#1a1a1a',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        padding: '1rem',
-        color: 'white'
+        backgroundColor: '#f5f1e8',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        padding: '2rem 1rem',
+        color: '#8b5a3c'
       }}>
         <div style={{
-          maxWidth: '100%',
+          maxWidth: '400px',
           margin: '0 auto',
           textAlign: 'center'
         }}>
@@ -659,36 +659,42 @@ function HanglightApp() {
             onClick={() => setShowAddFriend(false)}
             style={{
               position: 'absolute',
-              top: '1rem',
-              left: '1rem',
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: 'none',
-              borderRadius: '15px',
-              padding: '0.5rem 1rem',
+              top: '2rem',
+              left: '2rem',
+              background: 'rgba(210, 105, 30, 0.1)',
+              border: '1px solid rgba(210, 105, 30, 0.3)',
+              borderRadius: '20px',
+              padding: '0.8rem 1.5rem',
               fontSize: '1rem',
               cursor: 'pointer',
-              color: 'white'
+              color: '#d2691e',
+              fontWeight: '500'
             }}
           >
             ← Back
           </button>
 
-          <h1 style={{
-            fontSize: '2rem',
-            color: 'white',
-            marginBottom: '2rem',
-            fontWeight: 'normal'
+          <div style={{
+            background: 'linear-gradient(135deg, #d2691e, #cd853f, #daa520)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            fontSize: '2.5rem',
+            fontWeight: '400',
+            marginBottom: '3rem',
+            marginTop: '2rem'
           }}>
             Add Friend
-          </h1>
+          </div>
 
           {message && (
             <div style={{
               padding: '1rem',
               marginBottom: '2rem',
-              backgroundColor: message.includes('sent') ? 'rgba(40, 167, 69, 0.2)' : 'rgba(220, 53, 69, 0.2)',
-              color: message.includes('sent') ? '#90ee90' : '#ffcccb',
-              borderRadius: '15px'
+              backgroundColor: message.includes('sent') ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)',
+              color: message.includes('sent') ? '#28a745' : '#dc3545',
+              borderRadius: '16px',
+              border: `1px solid ${message.includes('sent') ? 'rgba(40, 167, 69, 0.3)' : 'rgba(220, 53, 69, 0.3)'}`
             }}>
               {message}
             </div>
@@ -702,16 +708,16 @@ function HanglightApp() {
               placeholder="Email or Username (ABC123)"
               style={{
                 width: '100%',
-                padding: '1rem',
+                padding: '1.2rem',
                 fontSize: '1.1rem',
-                border: '2px solid #333',
-                borderRadius: '15px',
+                border: '1px solid rgba(210, 105, 30, 0.3)',
+                borderRadius: '16px',
                 textAlign: 'center',
                 marginBottom: '1rem',
                 outline: 'none',
                 boxSizing: 'border-box',
-                backgroundColor: '#2a2a2a',
-                color: 'white'
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                color: '#8b5a3c'
               }}
             />
 
@@ -722,15 +728,15 @@ function HanglightApp() {
               placeholder="Message (optional)"
               style={{
                 width: '100%',
-                padding: '1rem',
+                padding: '1.2rem',
                 fontSize: '1.1rem',
-                border: '2px solid #333',
-                borderRadius: '15px',
+                border: '1px solid rgba(210, 105, 30, 0.3)',
+                borderRadius: '16px',
                 textAlign: 'center',
                 outline: 'none',
                 boxSizing: 'border-box',
-                backgroundColor: '#2a2a2a',
-                color: 'white'
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                color: '#8b5a3c'
               }}
             />
           </div>
@@ -739,21 +745,21 @@ function HanglightApp() {
             onClick={sendFriendRequest}
             disabled={loading}
             style={{
-              background: 'linear-gradient(45deg, #28a745, #20c997)',
+              background: 'linear-gradient(135deg, #d2691e, #cd853f)',
               color: 'white',
               border: 'none',
-              borderRadius: '20px',
-              padding: '0.8rem 2.5rem',
+              borderRadius: '24px',
+              padding: '1rem 3rem',
               fontSize: '1.1rem',
               fontWeight: '500',
               cursor: 'pointer',
               opacity: loading ? 0.5 : 1,
-              boxShadow: '0 4px 15px rgba(40, 167, 69, 0.3)',
+              boxShadow: '0 4px 20px rgba(210, 105, 30, 0.3)',
               width: '100%',
               maxWidth: '200px'
             }}
           >
-            {loading ? 'Sending...' : 'Send Request'}
+            {loading ? 'Sending...' : 'Send'}
           </button>
         </div>
       </div>
@@ -765,16 +771,16 @@ function HanglightApp() {
     return (
       <div style={{
         minHeight: '100vh',
-        backgroundColor: '#1a1a1a',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        padding: '1rem',
+        backgroundColor: '#f5f1e8',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        padding: '2rem 1rem',
         position: 'relative',
         maxWidth: '100vw',
         overflow: 'hidden',
-        color: 'white'
+        color: '#8b5a3c'
       }}>
         <div style={{
-          maxWidth: '100%',
+          maxWidth: '600px',
           margin: '0 auto',
           textAlign: 'center'
         }}>
@@ -783,31 +789,37 @@ function HanglightApp() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '1.5rem',
+            marginBottom: '3rem',
             padding: '0 0.5rem'
           }}>
             <div style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '15px',
-              padding: '0.5rem 1rem'
+              background: 'rgba(255, 255, 255, 0.6)',
+              borderRadius: '20px',
+              padding: '0.8rem 1.5rem',
+              border: '1px solid rgba(210, 105, 30, 0.2)'
             }}>
-              <span style={{ fontWeight: '500' }}>
+              <span style={{ fontWeight: '500', color: '#8b5a3c' }}>
                 {profile?.username}
               </span>
             </div>
 
-            {/* Three bars menu */}
+            {/* Menu button */}
             <div style={{ position: 'relative' }}>
               <button
                 onClick={() => setShowMenu(!showMenu)}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '0.5rem',
+                  background: 'rgba(255, 255, 255, 0.6)',
+                  border: '1px solid rgba(210, 105, 30, 0.2)',
+                  borderRadius: '16px',
+                  padding: '0.8rem',
                   cursor: 'pointer',
-                  color: 'white',
-                  fontSize: '1.2rem'
+                  color: '#8b5a3c',
+                  fontSize: '1.2rem',
+                  width: '45px',
+                  height: '45px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
               >
                 ☰
@@ -816,54 +828,56 @@ function HanglightApp() {
               {showMenu && (
                 <div style={{
                   position: 'absolute',
-                  top: '3rem',
+                  top: '3.5rem',
                   right: '0',
                   background: 'rgba(255, 255, 255, 0.95)',
-                  borderRadius: '15px',
-                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
-                  padding: '1rem',
+                  borderRadius: '20px',
+                  boxShadow: '0 8px 30px rgba(139, 90, 60, 0.15)',
+                  padding: '1.5rem',
                   zIndex: 1000,
-                  minWidth: '280px',
-                  color: '#333'
+                  minWidth: '320px',
+                  color: '#8b5a3c',
+                  border: '1px solid rgba(210, 105, 30, 0.2)'
                 }}>
                   {/* Friend Requests Section */}
-                  <div style={{ marginBottom: '1rem' }}>
-                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h4 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: '#d2691e' }}>
                       Friend Requests ({pendingRequests.length})
                     </h4>
                     
                     {pendingRequests.length === 0 ? (
-                      <div style={{ fontSize: '0.8rem', color: '#666', padding: '0.5rem' }}>
+                      <div style={{ fontSize: '0.9rem', color: '#a0785a', padding: '0.8rem', textAlign: 'center' }}>
                         No pending requests
                       </div>
                     ) : (
                       pendingRequests.map(request => (
                         <div key={request.id} style={{
-                          background: 'rgba(255, 193, 7, 0.1)',
-                          border: '1px solid #ffc107',
-                          borderRadius: '10px',
-                          padding: '0.75rem',
-                          marginBottom: '0.5rem'
+                          background: 'rgba(218, 165, 32, 0.1)',
+                          border: '1px solid rgba(218, 165, 32, 0.3)',
+                          borderRadius: '16px',
+                          padding: '1rem',
+                          marginBottom: '0.8rem'
                         }}>
-                          <div style={{ fontWeight: '500', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                          <div style={{ fontWeight: '500', fontSize: '0.95rem', marginBottom: '0.5rem' }}>
                             {request.sender?.username || 'Unknown User'}
                           </div>
                           {request.message && (
-                            <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.5rem' }}>
+                            <div style={{ fontSize: '0.85rem', color: '#a0785a', marginBottom: '0.8rem' }}>
                               "{request.message}"
                             </div>
                           )}
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', gap: '0.8rem' }}>
                             <button
                               onClick={() => respondToFriendRequest(request.id, 'accepted')}
                               style={{
-                                background: '#28a745',
+                                background: 'linear-gradient(135deg, #28a745, #20c997)',
                                 color: 'white',
                                 border: 'none',
-                                borderRadius: '6px',
-                                padding: '0.3rem 0.6rem',
-                                fontSize: '0.7rem',
-                                cursor: 'pointer'
+                                borderRadius: '12px',
+                                padding: '0.5rem 1rem',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                fontWeight: '500'
                               }}
                             >
                               Accept
@@ -871,13 +885,14 @@ function HanglightApp() {
                             <button
                               onClick={() => respondToFriendRequest(request.id, 'declined')}
                               style={{
-                                background: '#dc3545',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                padding: '0.3rem 0.6rem',
-                                fontSize: '0.7rem',
-                                cursor: 'pointer'
+                                background: 'rgba(220, 53, 69, 0.1)',
+                                color: '#dc3545',
+                                border: '1px solid rgba(220, 53, 69, 0.3)',
+                                borderRadius: '12px',
+                                padding: '0.5rem 1rem',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                fontWeight: '500'
                               }}
                             >
                               Decline
@@ -898,13 +913,15 @@ function HanglightApp() {
                     onClick={handleLogout}
                     style={{
                       width: '100%',
-                      padding: '0.75rem 1rem',
+                      padding: '1rem',
                       backgroundColor: 'rgba(220, 53, 69, 0.1)',
                       color: '#dc3545',
-                      border: '1px solid #dc3545',
-                      borderRadius: '10px',
+                      border: '1px solid rgba(220, 53, 69, 0.3)',
+                      borderRadius: '16px',
                       cursor: 'pointer',
-                      fontWeight: '500'
+                      fontWeight: '500',
+                      fontSize: '1rem',
+                      marginTop: '1rem'
                     }}
                   >
                     🚪 Logout
@@ -914,12 +931,37 @@ function HanglightApp() {
             </div>
           </div>
 
-          {/* Status Light Picker */}
-          <div style={{ marginBottom: '2rem' }}>
+          {/* Main title */}
+          <div style={{
+            background: 'linear-gradient(135deg, #d2691e, #cd853f, #daa520)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            fontSize: 'clamp(3rem, 8vw, 5rem)',
+            fontWeight: '400',
+            marginBottom: '0.5rem',
+            letterSpacing: '-0.02em'
+          }}>
+            hanglight
+          </div>
+
+          <div style={{
+            fontSize: '1.1rem',
+            color: '#a0785a',
+            fontWeight: '300',
+            letterSpacing: '0.3em',
+            textTransform: 'lowercase',
+            marginBottom: '4rem'
+          }}>
+            antisocial media
+          </div>
+
+          {/* Status Light Picker - New Design */}
+          <div style={{ marginBottom: '4rem' }}>
             <div style={{
               display: 'flex',
               justifyContent: 'center',
-              gap: '1rem',
+              gap: '2rem',
               marginBottom: '2rem'
             }}>
               {['red', 'yellow', 'green'].map(status => (
@@ -928,17 +970,27 @@ function HanglightApp() {
                   onClick={() => updateStatusLight(status)}
                   disabled={isUpdatingStatus}
                   style={{
-                    width: '60px',
-                    height: '60px',
+                    width: '80px',
+                    height: '80px',
                     borderRadius: '50%',
-                    border: profile?.status_light === status ? '3px solid white' : '2px solid #333',
+                    border: profile?.status_light === status ? '3px solid #d2691e' : '2px solid rgba(139, 90, 60, 0.3)',
                     backgroundColor: getStatusColor(status),
                     cursor: 'pointer',
-                    opacity: isUpdatingStatus ? 0.5 : 1,
-                    boxShadow: profile?.status_light === status ? '0 0 20px rgba(255,255,255,0.5)' : 'none'
+                    opacity: profile?.status_light === status ? 1 : 0.3, // Opaque until active
+                    boxShadow: profile?.status_light === status ? '0 0 25px rgba(210, 105, 30, 0.4)' : 'none',
+                    transition: 'all 0.3s ease',
+                    transform: profile?.status_light === status ? 'scale(1.1)' : 'scale(1)'
                   }}
                 />
               ))}
+            </div>
+            
+            <div style={{
+              fontSize: '1.2rem',
+              color: '#8b5a3c',
+              fontWeight: '500'
+            }}>
+              {getStatusText(profile?.status_light)}
             </div>
           </div>
 
@@ -950,22 +1002,23 @@ function HanglightApp() {
                 display: 'flex', 
                 justifyContent: 'space-between', 
                 alignItems: 'center',
-                marginBottom: '1rem'
+                marginBottom: '2rem'
               }}>
                 <button
                   onClick={() => setShowAddFriend(true)}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: 'none',
+                    background: 'rgba(255, 255, 255, 0.6)',
+                    border: '1px solid rgba(210, 105, 30, 0.2)',
                     borderRadius: '50%',
-                    width: '40px',
-                    height: '40px',
-                    fontSize: '1.5rem',
+                    width: '50px',
+                    height: '50px',
+                    fontSize: '1.8rem',
                     cursor: 'pointer',
-                    color: 'white',
+                    color: '#d2691e',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    fontWeight: '300'
                   }}
                 >
                   +
@@ -974,14 +1027,14 @@ function HanglightApp() {
                 <button
                   onClick={() => loadFriends()}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: 'none',
+                    background: 'rgba(255, 255, 255, 0.6)',
+                    border: '1px solid rgba(210, 105, 30, 0.2)',
                     borderRadius: '50%',
-                    width: '40px',
-                    height: '40px',
-                    fontSize: '1.2rem',
+                    width: '50px',
+                    height: '50px',
+                    fontSize: '1.5rem',
                     cursor: 'pointer',
-                    color: 'white',
+                    color: '#d2691e',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center'
@@ -994,31 +1047,34 @@ function HanglightApp() {
               {/* Friends List */}
               {friends.map(friend => (
                 <div key={friend.friend_id} style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: '15px',
-                  padding: '1rem',
-                  marginBottom: '0.5rem',
+                  background: 'rgba(255, 255, 255, 0.6)',
+                  borderRadius: '20px',
+                  padding: '1.5rem',
+                  marginBottom: '1rem',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between'
+                  justifyContent: 'space-between',
+                  border: '1px solid rgba(210, 105, 30, 0.1)',
+                  boxShadow: '0 2px 15px rgba(139, 90, 60, 0.08)'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                     <div
                       style={{
-                        width: '20px',
-                        height: '20px',
+                        width: '24px',
+                        height: '24px',
                         borderRadius: '50%',
-                        backgroundColor: getStatusColor(friend.status_light)
+                        backgroundColor: getStatusColor(friend.status_light),
+                        boxShadow: '0 0 10px rgba(0,0,0,0.2)'
                       }}
                     />
                     <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontWeight: '500' }}>{friend.username}</div>
-                      <div style={{ fontSize: '0.8rem', color: '#ccc' }}>
+                      <div style={{ fontWeight: '500', color: '#8b5a3c' }}>{friend.username}</div>
+                      <div style={{ fontSize: '0.9rem', color: '#a0785a' }}>
                         {getStatusText(friend.status_light)}
                       </div>
                     </div>
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: '#999' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#c4a373' }}>
                     {formatTimeAgo(friend.last_status_update)}
                   </div>
                 </div>
@@ -1026,16 +1082,38 @@ function HanglightApp() {
             </div>
           )}
 
+          {/* Show add friend button if no friends */}
+          {friends.length === 0 && (
+            <div style={{ marginTop: '3rem' }}>
+              <button
+                onClick={() => setShowAddFriend(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #d2691e, #cd853f)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '24px',
+                  padding: '1rem 2rem',
+                  fontSize: '1.1rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(210, 105, 30, 0.3)'
+                }}
+              >
+                Add Your First Friend
+              </button>
+            </div>
+          )}
+
           {/* Footer */}
           <div style={{
             position: 'fixed',
-            bottom: '1rem',
-            left: '1rem',
-            fontSize: '0.7rem',
-            color: '#666',
+            bottom: '1.5rem',
+            left: '1.5rem',
+            fontSize: '0.8rem',
+            color: '#c4a373',
             fontFamily: 'monospace'
           }}>
-            Grail // Antisocial Media XXV
+            hanglight // antisocial media
           </div>
         </div>
       </div>
@@ -1046,41 +1124,55 @@ function HanglightApp() {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#1a1a1a',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      backgroundColor: '#f5f1e8',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '1rem'
+      padding: '2rem 1rem'
     }}>
       <div style={{
-        background: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: '25px',
-        padding: '2rem',
+        background: 'rgba(255, 255, 255, 0.8)',
+        borderRadius: '24px',
+        padding: '3rem 2rem',
         width: '100%',
         maxWidth: '400px',
         textAlign: 'center',
-        boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
-        color: 'white'
+        boxShadow: '0 8px 30px rgba(139, 90, 60, 0.15)',
+        color: '#8b5a3c',
+        border: '1px solid rgba(210, 105, 30, 0.2)'
       }}>
-        <h1 style={{
-          fontSize: '2.5rem',
-          fontWeight: 'bold',
-          margin: '0 0 0.5rem 0',
-          color: 'white'
+        <div style={{
+          background: 'linear-gradient(135deg, #d2691e, #cd853f, #daa520)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          fontSize: '3rem',
+          fontWeight: '400',
+          margin: '0 0 0.5rem 0'
         }}>
-          Hanglight
-        </h1>
-        <p style={{ color: '#ccc', margin: '0 0 2rem 0' }}>Status lights for friends</p>
+          hanglight
+        </div>
+        <p style={{ color: '#a0785a', margin: '0 0 3rem 0', letterSpacing: '0.2em', fontSize: '0.9rem' }}>
+          antisocial media
+        </p>
 
-        <div style={{ display: 'flex', marginBottom: '1.5rem', borderRadius: '20px', overflow: 'hidden' }}>
+        <div style={{ 
+          display: 'flex', 
+          marginBottom: '2rem', 
+          borderRadius: '16px', 
+          overflow: 'hidden',
+          background: 'rgba(210, 105, 30, 0.1)',
+          border: '1px solid rgba(210, 105, 30, 0.2)'
+        }}>
           <button
             onClick={() => setActiveTab('login')}
             style={{
               flex: 1,
               padding: '1rem',
-              backgroundColor: activeTab === 'login' ? '#28a745' : 'rgba(255, 255, 255, 0.1)',
-              color: 'white',
+              backgroundColor: activeTab === 'login' ? 'linear-gradient(135deg, #d2691e, #cd853f)' : 'transparent',
+              background: activeTab === 'login' ? 'linear-gradient(135deg, #d2691e, #cd853f)' : 'transparent',
+              color: activeTab === 'login' ? 'white' : '#8b5a3c',
               border: 'none',
               cursor: 'pointer',
               fontWeight: '500'
@@ -1093,8 +1185,9 @@ function HanglightApp() {
             style={{
               flex: 1,
               padding: '1rem',
-              backgroundColor: activeTab === 'register' ? '#28a745' : 'rgba(255, 255, 255, 0.1)',
-              color: 'white',
+              backgroundColor: activeTab === 'register' ? 'linear-gradient(135deg, #d2691e, #cd853f)' : 'transparent',
+              background: activeTab === 'register' ? 'linear-gradient(135deg, #d2691e, #cd853f)' : 'transparent',
+              color: activeTab === 'register' ? 'white' : '#8b5a3c',
               border: 'none',
               cursor: 'pointer',
               fontWeight: '500'
@@ -1107,13 +1200,15 @@ function HanglightApp() {
         {message && (
           <div style={{
             padding: '1rem',
-            borderRadius: '15px',
-            marginBottom: '1rem',
-            backgroundColor: message.includes('successful') || message.includes('Welcome') ? 'rgba(40, 167, 69, 0.2)' : 
-                           message.includes('failed') ? 'rgba(220, 53, 69, 0.2)' : 'rgba(255, 193, 7, 0.2)',
-            color: message.includes('successful') || message.includes('Welcome') ? '#90ee90' : 
-                   message.includes('failed') ? '#ffcccb' : '#fff3cd',
-            fontSize: '0.9rem'
+            borderRadius: '16px',
+            marginBottom: '1.5rem',
+            backgroundColor: message.includes('successful') || message.includes('Welcome') ? 'rgba(40, 167, 69, 0.1)' : 
+                           message.includes('failed') ? 'rgba(220, 53, 69, 0.1)' : 'rgba(218, 165, 32, 0.1)',
+            color: message.includes('successful') || message.includes('Welcome') ? '#28a745' : 
+                   message.includes('failed') ? '#dc3545' : '#d2691e',
+            fontSize: '0.9rem',
+            border: `1px solid ${message.includes('successful') || message.includes('Welcome') ? 'rgba(40, 167, 69, 0.3)' : 
+                           message.includes('failed') ? 'rgba(220, 53, 69, 0.3)' : 'rgba(218, 165, 32, 0.3)'}`
           }}>
             {message}
           </div>
@@ -1126,15 +1221,15 @@ function HanglightApp() {
           placeholder="Email"
           style={{
             width: '100%',
-            padding: '1rem',
-            border: '2px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '15px',
+            padding: '1.2rem',
+            border: '1px solid rgba(210, 105, 30, 0.3)',
+            borderRadius: '16px',
             marginBottom: '1rem',
             boxSizing: 'border-box',
             fontSize: '1rem',
             outline: 'none',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            color: 'white'
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            color: '#8b5a3c'
           }}
         />
 
@@ -1145,15 +1240,15 @@ function HanglightApp() {
           placeholder="Password"
           style={{
             width: '100%',
-            padding: '1rem',
-            border: '2px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '15px',
+            padding: '1.2rem',
+            border: '1px solid rgba(210, 105, 30, 0.3)',
+            borderRadius: '16px',
             marginBottom: '1rem',
             boxSizing: 'border-box',
             fontSize: '1rem',
             outline: 'none',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            color: 'white'
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            color: '#8b5a3c'
           }}
         />
 
@@ -1166,15 +1261,15 @@ function HanglightApp() {
             maxLength={6}
             style={{
               width: '100%',
-              padding: '1rem',
-              border: '2px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '15px',
+              padding: '1.2rem',
+              border: '1px solid rgba(210, 105, 30, 0.3)',
+              borderRadius: '16px',
               marginBottom: '1rem',
               boxSizing: 'border-box',
               fontSize: '1rem',
               outline: 'none',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              color: 'white'
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              color: '#8b5a3c'
             }}
           />
         )}
@@ -1184,16 +1279,16 @@ function HanglightApp() {
           disabled={loading || !supabase}
           style={{
             width: '100%',
-            padding: '1rem',
-            background: 'linear-gradient(45deg, #28a745, #20c997)',
+            padding: '1.2rem',
+            background: 'linear-gradient(135deg, #d2691e, #cd853f)',
             color: 'white',
             border: 'none',
-            borderRadius: '15px',
+            borderRadius: '16px',
             cursor: 'pointer',
             fontWeight: '600',
             fontSize: '1rem',
             opacity: (loading || !supabase) ? 0.5 : 1,
-            boxShadow: '0 4px 15px rgba(40, 167, 69, 0.3)'
+            boxShadow: '0 4px 20px rgba(210, 105, 30, 0.3)'
           }}
         >
           {loading ? 'Loading...' : (activeTab === 'login' ? 'Login' : 'Register')}
