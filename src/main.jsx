@@ -21,6 +21,7 @@ function HanglightApp() {
   })
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
