@@ -362,16 +362,21 @@ function HanglightApp() {
         return
       }
 
-      // Check if request already exists
+      // Check if any request already exists (pending, accepted, or declined)
       const { data: existingRequest } = await supabase
         .from('friend_requests')
         .select('*')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${targetUser.id}),and(sender_id.eq.${targetUser.id},receiver_id.eq.${user.id})`)
-        .eq('status', 'pending')
         .maybeSingle()
 
       if (existingRequest) {
-        setMessage('Friend request already sent!')
+        if (existingRequest.status === 'pending') {
+          setMessage('Friend request already sent!')
+        } else if (existingRequest.status === 'accepted') {
+          setMessage('You are already friends!')
+        } else if (existingRequest.status === 'declined') {
+          setMessage('Previous request was declined')
+        }
         return
       }
 
