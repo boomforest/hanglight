@@ -931,20 +931,11 @@ function HanglightApp() {
 
           {/* Status Light Picker */}
           <div style={{ marginBottom: '2rem' }}>
-            <h2 style={{
-              fontSize: '1.5rem',
-              color: 'white',
-              margin: '0 0 1rem 0',
-              fontWeight: 'normal'
-            }}>
-              Your Status
-            </h2>
-            
             <div style={{
               display: 'flex',
               justifyContent: 'center',
               gap: '1rem',
-              marginBottom: '1rem'
+              marginBottom: '2rem'
             }}>
               {['red', 'yellow', 'green'].map(status => (
                 <button
@@ -964,46 +955,58 @@ function HanglightApp() {
                 />
               ))}
             </div>
-            
-            <div style={{ 
-              fontSize: '0.9rem', 
-              color: '#ccc'
-            }}>
-              {getStatusText(profile?.status_light)}
-            </div>
           </div>
 
-          {/* Add Friend Button */}
-          <button
-            onClick={() => setShowAddFriend(true)}
-            style={{
-              background: 'linear-gradient(45deg, #007bff, #0056b3)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '20px',
-              padding: '0.8rem 2rem',
-              fontSize: '1rem',
-              fontWeight: '500',
-              cursor: 'pointer',
-              marginBottom: '2rem',
-              boxShadow: '0 4px 15px rgba(0, 123, 255, 0.3)'
-            }}
-          >
-            + Add Friend
-          </button>
-
-          {/* Friends List */}
-          {friends.length > 0 ? (
-            <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{ 
-                fontSize: '1.2rem', 
-                color: 'white', 
-                marginBottom: '1rem',
-                fontWeight: 'normal'
+          {/* Friends Section */}
+          {friends.length > 0 && (
+            <div>
+              {/* Friends Header with Controls */}
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '1rem'
               }}>
-                Friends ({friends.length})
-              </h3>
+                <button
+                  onClick={() => setShowAddFriend(true)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '40px',
+                    height: '40px',
+                    fontSize: '1.5rem',
+                    cursor: 'pointer',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  +
+                </button>
+
+                <button
+                  onClick={() => loadFriends()}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '40px',
+                    height: '40px',
+                    fontSize: '1.2rem',
+                    cursor: 'pointer',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  ↻
+                </button>
+              </div>
               
+              {/* Friends List */}
               {friends.map(friend => (
                 <div key={friend.friend_id} style={{
                   background: 'rgba(255, 255, 255, 0.05)',
@@ -1036,7 +1039,7 @@ function HanglightApp() {
                 </div>
               ))}
             </div>
-          ) : null}
+          )}
         </div>
       </div>
     )
