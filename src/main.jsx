@@ -180,23 +180,45 @@ function HanglightApp() {
     try {
       console.log('Querying for real friend requests...')
       
-      // Query for real friend requests
+      // First, let's see ALL friend requests in the system
+      const { data: allRequests, error: allError } = await client
+        .from('friend_requests')
+        .select('*')
+      
+      console.log('ALL friend requests in system:', allRequests)
+      console.log('All requests error:', allError)
+      
+      // Now query for this specific user's requests
       const { data, error } = await client
         .from('friend_requests')
         .select(`
           id,
           message,
           created_at,
+          sender_id,
+          receiver_id,
+          status,
           sender:profiles!sender_id(username, email)
         `)
         .eq('receiver_id', currentUser.id)
         .eq('status', 'pending')
       
+      console.log('Query for receiver_id =', currentUser.id)
       console.log('Real friend requests data:', data)
       console.log('Friend requests error:', error)
       
+      // Check if any requests match this user as receiver
+      if (allRequests) {
+        const matchingRequests = allRequests.filter(req => 
+          req.receiver_id === currentUser.id && req.status === 'pending'
+        )
+        console.log('Manual filter found:', matchingRequests)
+      }
+      
       if (error) {
         console.error('Database error:', error)
+        setPendingRequests([])
+        return
       }
       
       if (data && data.length > 0) {
