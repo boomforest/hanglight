@@ -7,9 +7,9 @@ function HanglightApp() {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [friends, setFriends] = useState([])
-  const [friendRequests, setFriendRequests] = useState([])
   const [activeTab, setActiveTab] = useState('login')
   const [showAddFriend, setShowAddFriend] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -22,7 +22,45 @@ function HanglightApp() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
+
+  // Handle wallet address save
+  const handleWalletSave = async (walletAddress) => {
+    if (!supabase || !user) {
+      console.log('No supabase client or user available')
+      return
+    }
+
+    try {
+      // Update the profile with the wallet address
+      const { error } = await supabase
+        .from('profiles')
+        .update({ wallet_address: walletAddress || null })
+        .eq('id', user.id)
+
+      if (error) {
+        console.error('Error saving wallet address:', error)
+        setMessage('Failed to save wallet address: ' + error.message)
+        return
+      }
+
+      // Refresh the profile to show the updated wallet address
+      await ensureProfileExists(user)
+      
+      if (walletAddress) {
+        setMessage('Wallet address saved! 🎉')
+      } else {
+        setMessage('Wallet address removed')
+      }
+    } catch (error) {
+      console.error('Error handling wallet save:', error)
+      setMessage('Error saving wallet: ' + error.message)
+    }
+  }
+
+  const formatWalletAddress = (address) => {
+    if (!address) return 'No wallet connected'
+    return `${address.slice(0, 6)}...${address.slice(-4)}`
+  }
 
   useEffect(() => {
     const initSupabase = async () => {
@@ -40,7 +78,6 @@ function HanglightApp() {
           setUser(session.user)
           await ensureProfileExists(session.user, client)
           await loadFriends(client)
-          await loadFriendRequests(client)
         }
       } catch (error) {
         setMessage('Connection failed')
@@ -166,11 +203,6 @@ function HanglightApp() {
     }
   }
 
-  const loadFriendRequests = async (client = supabase) => {
-    // This function is now handled in loadFriends() - keeping for compatibility
-    return
-  }
-
   const updateStatusLight = async (newStatus) => {
     if (!supabase || !user) return
     
@@ -205,50 +237,32 @@ function HanglightApp() {
       setLoading(true)
       console.log('Searching for user:', identifier)
 
-      // Find user by email or username (try both cases)
+      // Find user by email or username
       let targetUser = null
-      let findError = null
       
       // First try exact email match
-      const { data: emailMatch, error: emailError } = await supabase
+      const { data: emailMatch } = await supabase
         .from('profiles')
         .select('id, username, email')
         .eq('email', identifier)
         .maybeSingle()
       
-      console.log('Email search result:', emailMatch, emailError)
-      
       if (emailMatch) {
         targetUser = emailMatch
       } else {
-        // Try username match (case insensitive)
-        const { data: usernameMatch, error: usernameError } = await supabase
+        // Try username match
+        const { data: usernameMatch } = await supabase
           .from('profiles')
           .select('id, username, email')
           .ilike('username', identifier)
           .maybeSingle()
         
-        console.log('Username search result:', usernameMatch, usernameError)
-        
         if (usernameMatch) {
           targetUser = usernameMatch
-        } else {
-          findError = usernameError || emailError
         }
       }
 
-      console.log('Final target user:', targetUser)
-          .ilike('username', identifier)
-          .maybeSingle()
-        
-        if (usernameMatch) {
-          targetUser = usernameMatch
-        } else {
-          findError = usernameError || emailError
-        }
-      }
-
-      if (findError || !targetUser) {
+      if (!targetUser) {
         setMessage('User not found')
         return
       }
@@ -258,24 +272,25 @@ function HanglightApp() {
         return
       }
 
-      // Check if already friends or request exists
+      // Check if already friends
       const { data: existingFriendship } = await supabase
         .from('friendships')
         .select('*')
         .or(`and(user_id.eq.${user.id},friend_id.eq.${targetUser.id}),and(user_id.eq.${targetUser.id},friend_id.eq.${user.id})`)
-        .single()
+        .maybeSingle()
 
       if (existingFriendship) {
         setMessage('Already friends!')
         return
       }
 
+      // Check if request already exists
       const { data: existingRequest } = await supabase
         .from('friend_requests')
         .select('*')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${targetUser.id}),and(sender_id.eq.${targetUser.id},receiver_id.eq.${user.id})`)
         .eq('status', 'pending')
-        .single()
+        .maybeSingle()
 
       if (existingRequest) {
         setMessage('Friend request already sent!')
@@ -283,9 +298,7 @@ function HanglightApp() {
       }
 
       // Send friend request
-      console.log('Sending friend request from', user.id, 'to', targetUser.id)
-      
-      const { data: insertedRequest, error: requestError } = await supabase
+      const { error: requestError } = await supabase
         .from('friend_requests')
         .insert([{
           sender_id: user.id,
@@ -293,9 +306,6 @@ function HanglightApp() {
           message: addFriendData.message.trim() || 'Hi! Let\'s be friends on Hanglight!',
           status: 'pending'
         }])
-        .select()
-
-      console.log('Insert result:', insertedRequest, requestError)
 
       if (requestError) throw requestError
 
@@ -453,7 +463,6 @@ function HanglightApp() {
     setUser(null)
     setProfile(null)
     setFriends([])
-    setFriendRequests([])
     setShowAddFriend(false)
     setShowSettings(false)
     setMessage('')
@@ -783,8 +792,6 @@ function HanglightApp() {
           >
             + Add Friend
           </button>
-
-          {/* Friend Requests - Now removed since they're inline */}
 
           {/* Friends List */}
           <div>
