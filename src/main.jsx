@@ -154,11 +154,18 @@ function HanglightApp() {
     try {
       console.log('Loading friends for user:', user.id)
       
-      // Get accepted friends
-      const { data: friendsData, error: friendsError } = await client.rpc('get_user_friends', { user_uuid: user.id })
+      // Get accepted friends - simplified query
+      const { data: friendsData, error: friendsError } = await client
+        .from('friendships')
+        .select(`
+          *,
+          friend_profile:profiles!friend_id(id, username, email, status_light, last_status_update)
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'accepted')
+      
       if (friendsError) {
         console.error('Friends error:', friendsError)
-        throw friendsError
       }
       console.log('Friends data:', friendsData)
 
@@ -176,13 +183,20 @@ function HanglightApp() {
       
       if (requestsError) {
         console.error('Requests error:', requestsError)
-        throw requestsError
       }
       console.log('Requests data:', requestsData)
 
       // Combine friends and pending requests
       const allItems = [
-        ...(friendsData || []).map(friend => ({ ...friend, type: 'friend' })),
+        ...(friendsData || []).map(friendship => ({
+          friend_id: friendship.friend_profile.id,
+          username: friendship.friend_profile.username,
+          email: friendship.friend_profile.email,
+          status_light: friendship.friend_profile.status_light || 'red',
+          last_status_update: friendship.friend_profile.last_status_update,
+          friendship_created_at: friendship.created_at,
+          type: 'friend'
+        })),
         ...(requestsData || []).map(request => ({
           friend_id: request.sender.id,
           username: request.sender.username,
