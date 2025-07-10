@@ -937,27 +937,16 @@ function HanglightApp() {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
-            fontSize: 'clamp(3rem, 8vw, 5rem)',
+            fontSize: 'clamp(2.5rem, 6vw, 4rem)',
             fontWeight: '400',
-            marginBottom: '0.5rem',
+            marginBottom: '2rem',
             letterSpacing: '-0.02em'
           }}>
             hanglight
           </div>
 
-          <div style={{
-            fontSize: '1.1rem',
-            color: '#a0785a',
-            fontWeight: '300',
-            letterSpacing: '0.3em',
-            textTransform: 'lowercase',
-            marginBottom: '4rem'
-          }}>
-            antisocial media
-          </div>
-
           {/* Status Light Picker - New Design */}
-          <div style={{ marginBottom: '4rem' }}>
+          <div style={{ marginBottom: '2rem' }}>
             <div style={{
               display: 'flex',
               justifyContent: 'center',
@@ -1113,7 +1102,7 @@ function HanglightApp() {
             color: '#c4a373',
             fontFamily: 'monospace'
           }}>
-            hanglight // antisocial media
+            hanglight
           </div>
         </div>
       </div>
