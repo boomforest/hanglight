@@ -314,7 +314,6 @@ function HanglightApp() {
       if (error) throw error
 
       await ensureProfileExists(user)
-      setMessage(`Status updated to ${newStatus}! 🚦`)
     } catch (error) {
       setMessage('Failed to update status: ' + error.message)
     } finally {
@@ -914,20 +913,6 @@ function HanglightApp() {
               )}
             </div>
           </div>
-
-          {/* Status Messages */}
-          {message && message.includes('updated') && (
-            <div style={{
-              padding: '1rem',
-              marginBottom: '1.5rem',
-              backgroundColor: 'rgba(40, 167, 69, 0.2)',
-              color: '#90ee90',
-              borderRadius: '15px',
-              fontSize: '0.9rem'
-            }}>
-              {message}
-            </div>
-          )}
 
           {/* Status Light Picker */}
           <div style={{ marginBottom: '2rem' }}>
