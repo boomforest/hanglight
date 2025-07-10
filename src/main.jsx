@@ -63,8 +63,10 @@ function HanglightApp() {
   }
 
   useEffect(() => {
+    console.log('=== SUPABASE INIT STARTING ===')
     const initSupabase = async () => {
       try {
+        console.log('Creating Supabase client...')
         const { createClient } = await import('@supabase/supabase-js')
         const client = createClient(
           import.meta.env.VITE_SUPABASE_URL,
@@ -72,16 +74,26 @@ function HanglightApp() {
         )
         setSupabase(client)
         setMessage('')
+        console.log('Supabase client created successfully')
 
+        console.log('Getting session...')
         const { data: { session } } = await client.auth.getSession()
+        console.log('Session:', session)
+        
         if (session?.user) {
+          console.log('User found in session:', session.user)
           setUser(session.user)
+          console.log('About to call ensureProfileExists...')
           await ensureProfileExists(session.user, client)
+          console.log('About to call loadFriends...')
           await loadFriends(client)
+          console.log('loadFriends completed')
+        } else {
+          console.log('No user in session')
         }
       } catch (error) {
+        console.error('Supabase init error:', error)
         setMessage('Connection failed')
-        console.error('Supabase error:', error)
       }
     }
     initSupabase()
@@ -447,6 +459,8 @@ function HanglightApp() {
     try {
       setLoading(true)
       setMessage('Logging in...')
+      console.log('=== LOGIN STARTING ===')
+      console.log('Email:', formData.email)
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
@@ -454,16 +468,24 @@ function HanglightApp() {
       })
 
       if (error) {
+        console.error('Login error:', error)
         setMessage('Login failed: ' + error.message)
         return
       }
 
+      console.log('Login successful, user:', data.user)
       setMessage('Login successful!')
       setUser(data.user)
+      
+      console.log('About to call ensureProfileExists after login...')
       await ensureProfileExists(data.user)
+      console.log('About to call loadFriends after login...')
       await loadFriends()
+      console.log('Login process complete')
+      
       setFormData({ email: '', password: '', username: '' })
     } catch (err) {
+      console.error('Login catch error:', err)
       setMessage('Login error: ' + err.message)
     } finally {
       setLoading(false)
