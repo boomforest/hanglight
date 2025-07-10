@@ -916,14 +916,12 @@ function HanglightApp() {
           </div>
 
           {/* Status Messages */}
-          {message && (
+          {message && message.includes('updated') && (
             <div style={{
               padding: '1rem',
               marginBottom: '1.5rem',
-              backgroundColor: message.includes('successful') || message.includes('sent') || message.includes('updated') ? 'rgba(40, 167, 69, 0.2)' : 
-                             message.includes('failed') || message.includes('Error') ? 'rgba(220, 53, 69, 0.2)' : 'rgba(255, 193, 7, 0.2)',
-              color: message.includes('successful') || message.includes('sent') || message.includes('updated') ? '#90ee90' : 
-                     message.includes('failed') || message.includes('Error') ? '#ffcccb' : '#fff3cd',
+              backgroundColor: 'rgba(40, 167, 69, 0.2)',
+              color: '#90ee90',
               borderRadius: '15px',
               fontSize: '0.9rem'
             }}>
@@ -969,8 +967,7 @@ function HanglightApp() {
             
             <div style={{ 
               fontSize: '0.9rem', 
-              color: '#ccc',
-              marginBottom: '1rem'
+              color: '#ccc'
             }}>
               {getStatusText(profile?.status_light)}
             </div>
