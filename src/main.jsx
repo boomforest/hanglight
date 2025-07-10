@@ -176,27 +176,41 @@ function HanglightApp() {
     }
     
     console.log('User ID:', currentUser.id)
-    console.log('About to set fake requests...')
     
-    // Just set fake data immediately to test
-    const fakeRequests = [
-      {
-        id: 'fake-1',
-        message: 'Hey! Let\'s be friends on Hanglight!',
-        created_at: new Date().toISOString(),
-        sender: { username: 'TEST001', email: 'test@example.com' }
-      },
-      {
-        id: 'fake-2', 
-        message: 'Would love to connect!',
-        created_at: new Date().toISOString(),
-        sender: { username: 'DEMO123', email: 'demo@example.com' }
+    try {
+      console.log('Querying for real friend requests...')
+      
+      // Query for real friend requests
+      const { data, error } = await client
+        .from('friend_requests')
+        .select(`
+          id,
+          message,
+          created_at,
+          sender:profiles!sender_id(username, email)
+        `)
+        .eq('receiver_id', currentUser.id)
+        .eq('status', 'pending')
+      
+      console.log('Real friend requests data:', data)
+      console.log('Friend requests error:', error)
+      
+      if (error) {
+        console.error('Database error:', error)
       }
-    ]
-    
-    console.log('Setting fake requests:', fakeRequests)
-    setPendingRequests(fakeRequests)
-    console.log('Fake requests set!')
+      
+      if (data && data.length > 0) {
+        console.log('Found', data.length, 'real friend requests')
+        setPendingRequests(data)
+      } else {
+        console.log('No real friend requests found')
+        setPendingRequests([])
+      }
+      
+    } catch (error) {
+      console.error('Error in loadPendingRequests:', error)
+      setPendingRequests([])
+    }
   }
 
   const updateStatusLight = async (newStatus) => {
