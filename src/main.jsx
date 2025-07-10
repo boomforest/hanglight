@@ -55,57 +55,7 @@ function HanglightApp() {
     } catch (error) {
       console.error('Error handling wallet save:', error)
       setMessage('Error saving wallet: ' + error.message)
-  const loadFriends = async (client = supabase, userParam = null) => {
-    const currentUser = userParam || user
-    if (!currentUser) return
-    
-    try {
-      console.log('Loading friends for user:', currentUser.id)
-      
-      // Get accepted friends from friendships table
-      const { data: friendsData, error: friendsError } = await client
-        .from('friendships')
-        .select(`
-          *,
-          friend_profile:profiles!friend_id(id, username, email, status_light, last_status_update)
-        `)
-        .eq('user_id', currentUser.id)
-        .eq('status', 'accepted')
-      
-      console.log('Friends data:', friendsData)
-      console.log('Friends error:', friendsError)
-
-      if (friendsError) {
-        console.error('Friends error:', friendsError)
-        setFriends([])
-        return
-      }
-
-      // Format friends data
-      const formattedFriends = (friendsData || []).map(friendship => ({
-        friend_id: friendship.friend_profile?.id || friendship.friend_id,
-        username: friendship.friend_profile?.username || 'Unknown',
-        email: friendship.friend_profile?.email || '',
-        status_light: friendship.friend_profile?.status_light || 'red',
-        last_status_update: friendship.friend_profile?.last_status_update,
-        friendship_created_at: friendship.created_at
-      }))
-
-      console.log('Formatted friends:', formattedFriends)
-      setFriends(formattedFriends)
-    } catch (error) {
-      console.error('Error loading friends:', error)
-      setFriends([])
-  const formatTimeAgo = (timestamp) => {
-    if (!timestamp) return 'Recently'
-    const now = new Date()
-    const time = new Date(timestamp)
-    const diffInMinutes = Math.floor((now - time) / (1000 * 60))
-    
-    if (diffInMinutes < 1) return 'Just now'
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
-    return `${Math.floor(diffInMinutes / 1440)}d ago`
+    }
   }
 
   const formatWalletAddress = (address) => {
@@ -140,6 +90,7 @@ function HanglightApp() {
           // Call loadPendingRequests AFTER setUser, but pass the user directly
           setTimeout(async () => {
             await loadPendingRequests(client, session.user)
+            await loadFriends(client, session.user)
           }, 100)
           console.log('loadPendingRequests scheduled')
         } else {
@@ -283,6 +234,50 @@ function HanglightApp() {
     } catch (error) {
       console.error('Error in loadPendingRequests:', error)
       setPendingRequests([])
+    }
+  }
+
+  const loadFriends = async (client = supabase, userParam = null) => {
+    const currentUser = userParam || user
+    if (!currentUser) return
+    
+    try {
+      console.log('Loading friends for user:', currentUser.id)
+      
+      // Get accepted friends from friendships table
+      const { data: friendsData, error: friendsError } = await client
+        .from('friendships')
+        .select(`
+          *,
+          friend_profile:profiles!friend_id(id, username, email, status_light, last_status_update)
+        `)
+        .eq('user_id', currentUser.id)
+        .eq('status', 'accepted')
+      
+      console.log('Friends data:', friendsData)
+      console.log('Friends error:', friendsError)
+
+      if (friendsError) {
+        console.error('Friends error:', friendsError)
+        setFriends([])
+        return
+      }
+
+      // Format friends data
+      const formattedFriends = (friendsData || []).map(friendship => ({
+        friend_id: friendship.friend_profile?.id || friendship.friend_id,
+        username: friendship.friend_profile?.username || 'Unknown',
+        email: friendship.friend_profile?.email || '',
+        status_light: friendship.friend_profile?.status_light || 'red',
+        last_status_update: friendship.friend_profile?.last_status_update,
+        friendship_created_at: friendship.created_at
+      }))
+
+      console.log('Formatted friends:', formattedFriends)
+      setFriends(formattedFriends)
+    } catch (error) {
+      console.error('Error loading friends:', error)
+      setFriends([])
     }
   }
 
@@ -585,6 +580,18 @@ function HanglightApp() {
       case 'red': return 'Not available'
       default: return 'Unknown'
     }
+  }
+
+  const formatTimeAgo = (timestamp) => {
+    if (!timestamp) return 'Recently'
+    const now = new Date()
+    const time = new Date(timestamp)
+    const diffInMinutes = Math.floor((now - time) / (1000 * 60))
+    
+    if (diffInMinutes < 1) return 'Just now'
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
+    return `${Math.floor(diffInMinutes / 1440)}d ago`
   }
 
   // Add Friend Modal
