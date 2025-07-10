@@ -9,7 +9,8 @@ function HanglightApp() {
   const [friends, setFriends] = useState([])
   const [activeTab, setActiveTab] = useState('login')
   const [showAddFriend, setShowAddFriend] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [pendingRequests, setPendingRequests] = useState([])
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -338,7 +339,7 @@ function HanglightApp() {
       setMessage(`Friend request sent to ${targetUser.username}!`)
       setAddFriendData({ identifier: '', message: '' })
       setShowAddFriend(false)
-      await loadFriends()
+      await loadPendingRequests()
     } catch (error) {
       setMessage('Error sending friend request: ' + error.message)
     } finally {
@@ -378,7 +379,7 @@ function HanglightApp() {
         .update({ status: response })
         .eq('id', requestId)
 
-      await loadFriends()
+      await loadPendingRequests()
       setMessage(`Friend request ${response}!`)
     } catch (error) {
       setMessage('Error responding to request: ' + error.message)
@@ -432,7 +433,7 @@ function HanglightApp() {
       
       if (profile) {
         setUser(authData.user)
-        await loadFriends()
+        await loadPendingRequests()
         setMessage('Welcome to Hanglight!')
         setFormData({ email: '', password: '', username: '' })
       } else {
@@ -499,8 +500,9 @@ function HanglightApp() {
     setUser(null)
     setProfile(null)
     setFriends([])
+    setPendingRequests([])
     setShowAddFriend(false)
-    setShowSettings(false)
+    setShowMenu(false)
     setMessage('')
     setFormData({ email: '', password: '', username: '' })
     setAddFriendData({ identifier: '', message: '' })
@@ -681,72 +683,132 @@ function HanglightApp() {
             marginBottom: '1.5rem',
             padding: '0 0.5rem'
           }}>
-            <div 
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: '15px',
-                padding: '0.5rem 1rem',
-                cursor: 'pointer'
-              }}
-              onClick={() => setShowSettings(!showSettings)}
-            >
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: '15px',
+              padding: '0.5rem 1rem'
+            }}>
               <span style={{ fontWeight: '500' }}>
                 {profile?.username}
               </span>
             </div>
 
-            {showSettings && (
-              <div style={{
-                position: 'absolute',
-                top: '3rem',
-                left: '0.5rem',
-                right: '0.5rem',
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '15px',
-                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
-                padding: '1rem',
-                zIndex: 1000,
-                backdropFilter: 'blur(10px)'
-              }}>
-                {/* Wallet Input Component */}
-                <WalletInput 
-                  onWalletSave={handleWalletSave}
-                  currentWallet={profile?.wallet_address}
-                />
-                
-                <button
-                  onClick={handleLogout}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem 1rem',
-                    backgroundColor: 'rgba(220, 53, 69, 0.2)',
-                    color: '#ffcccb',
-                    border: '1px solid #dc3545',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                  }}
-                >
-                  🚪 Logout
-                </button>
-              </div>
-            )}
+            {/* Three bars menu */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '0.5rem',
+                  cursor: 'pointer',
+                  color: 'white',
+                  fontSize: '1.2rem'
+                }}
+              >
+                ☰
+              </button>
 
-            <button
-              onClick={handleLogout}
-              style={{
-                background: 'rgba(220, 53, 69, 0.2)',
-                color: '#ffcccb',
-                border: '1px solid #dc3545',
-                borderRadius: '10px',
-                padding: '0.5rem 1rem',
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                display: showSettings ? 'none' : 'block'
-              }}
-            >
-              Logout
-            </button>
+              {showMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '3rem',
+                  right: '0',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  borderRadius: '15px',
+                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
+                  padding: '1rem',
+                  zIndex: 1000,
+                  minWidth: '280px',
+                  color: '#333'
+                }}>
+                  {/* Friend Requests Section */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>
+                      Friend Requests ({pendingRequests.length})
+                    </h4>
+                    
+                    {pendingRequests.length === 0 ? (
+                      <div style={{ fontSize: '0.8rem', color: '#666', padding: '0.5rem' }}>
+                        No pending requests
+                      </div>
+                    ) : (
+                      pendingRequests.map(request => (
+                        <div key={request.id} style={{
+                          background: 'rgba(255, 193, 7, 0.1)',
+                          border: '1px solid #ffc107',
+                          borderRadius: '10px',
+                          padding: '0.75rem',
+                          marginBottom: '0.5rem'
+                        }}>
+                          <div style={{ fontWeight: '500', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+                            {request.sender?.username || 'Unknown User'}
+                          </div>
+                          {request.message && (
+                            <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.5rem' }}>
+                              "{request.message}"
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              onClick={() => respondToFriendRequest(request.id, 'accepted')}
+                              style={{
+                                background: '#28a745',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '0.3rem 0.6rem',
+                                fontSize: '0.7rem',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => respondToFriendRequest(request.id, 'declined')}
+                              style={{
+                                background: '#dc3545',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '0.3rem 0.6rem',
+                                fontSize: '0.7rem',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Decline
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Wallet Input Component */}
+                  <WalletInput 
+                    onWalletSave={handleWalletSave}
+                    currentWallet={profile?.wallet_address}
+                  />
+                  
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                      color: '#dc3545',
+                      border: '1px solid #dc3545',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    🚪 Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Status Messages */}
@@ -829,121 +891,16 @@ function HanglightApp() {
             + Add Friend
           </button>
 
-          {/* Friends List */}
-          <div>
-            <h3 style={{ 
-              fontSize: '1.2rem', 
-              color: 'white', 
-              marginBottom: '1rem',
-              fontWeight: 'normal'
-            }}>
-              Friends ({friends.filter(f => f.type === 'friend').length})
-            </h3>
-            
-            {friends.length === 0 ? (
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '15px',
-                padding: '2rem',
-                color: '#ccc'
-              }}>
-                No friends yet. Add some friends to see their status!
-              </div>
-            ) : (
-              friends.map(friend => (
-                <div key={friend.friend_id} style={{
-                  background: friend.type === 'request' ? 'rgba(255, 193, 7, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-                  border: friend.type === 'request' ? '1px solid #ffc107' : 'none',
-                  borderRadius: '15px',
-                  padding: '1rem',
-                  marginBottom: '0.5rem'
-                }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    marginBottom: friend.type === 'request' ? '0.5rem' : '0'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <div
-                        style={{
-                          width: '20px',
-                          height: '20px',
-                          borderRadius: '50%',
-                          backgroundColor: getStatusColor(friend.status_light)
-                        }}
-                      />
-                      <div style={{ textAlign: 'left' }}>
-                        <div style={{ fontWeight: '500' }}>
-                          {friend.username}
-                          {friend.type === 'request' && (
-                            <span style={{ 
-                              fontSize: '0.7rem', 
-                              color: '#ffc107',
-                              marginLeft: '0.5rem'
-                            }}>
-                              • Friend Request
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: '#ccc' }}>
-                          {friend.type === 'request' ? 'Wants to be friends!' : getStatusText(friend.status_light)}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {friend.type === 'request' ? (
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button
-                          onClick={() => respondToFriendRequest(friend.request_id, 'accepted')}
-                          style={{
-                            background: '#28a745',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '0.4rem 0.8rem',
-                            fontSize: '0.7rem',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => respondToFriendRequest(friend.request_id, 'declined')}
-                          style={{
-                            background: '#dc3545',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '0.4rem 0.8rem',
-                            fontSize: '0.7rem',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: '0.7rem', color: '#999' }}>
-                        {formatTimeAgo(friend.last_status_update)}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {friend.type === 'request' && friend.request_message && (
-                    <div style={{ 
-                      fontSize: '0.8rem', 
-                      color: '#ccc', 
-                      fontStyle: 'italic',
-                      marginTop: '0.5rem',
-                      paddingLeft: '2rem'
-                    }}>
-                      "{friend.request_message}"
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
+          {/* Simple message for now */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '15px',
+            padding: '2rem',
+            color: '#ccc',
+            textAlign: 'center'
+          }}>
+            <p>👆 Check the menu (☰) for friend requests!</p>
+            <p>Use the + Add Friend button to send friend requests.</p>
           </div>
         </div>
       </div>
