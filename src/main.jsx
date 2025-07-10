@@ -433,7 +433,9 @@ function HanglightApp() {
       
       if (profile) {
         setUser(authData.user)
+        console.log('About to call loadPendingRequests after register...')
         await loadPendingRequests()
+        console.log('Register loadPendingRequests completed')
         setMessage('Welcome to Hanglight!')
         setFormData({ email: '', password: '', username: '' })
       } else {
@@ -891,7 +893,7 @@ function HanglightApp() {
             + Add Friend
           </button>
 
-          {/* Simple message for now */}
+          {/* Simple status display */}
           <div style={{
             background: 'rgba(255, 255, 255, 0.05)',
             borderRadius: '15px',
@@ -899,8 +901,7 @@ function HanglightApp() {
             color: '#ccc',
             textAlign: 'center'
           }}>
-            <p>👆 Check the menu (☰) for friend requests!</p>
-            <p>Use the + Add Friend button to send friend requests.</p>
+            <p>Ready to hang? Update your status above!</p>
           </div>
         </div>
       </div>
