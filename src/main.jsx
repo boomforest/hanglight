@@ -1017,18 +1017,7 @@ function HanglightApp() {
                 </div>
               ))}
             </div>
-          ) : (
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '15px',
-              padding: '2rem',
-              color: '#ccc',
-              textAlign: 'center'
-            }}>
-              <p>Ready to hang? Update your status above!</p>
-              <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>Add friends to see their availability</p>
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
     )
