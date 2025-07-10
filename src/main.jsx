@@ -1089,7 +1089,7 @@ function HanglightApp() {
             color: '#c4a373',
             fontFamily: 'monospace'
           }}>
-            hanglight
+            grail // antisocial media MMXXV
           </div>
         </div>
       </div>
