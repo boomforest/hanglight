@@ -431,34 +431,56 @@ function HanglightApp() {
 
       if (response === 'accepted') {
         // Get the request details
-        const { data: request } = await supabase
+        const { data: request, error: requestError } = await supabase
           .from('friend_requests')
           .select('sender_id, receiver_id')
           .eq('id', requestId)
           .single()
 
-        if (request) {
+        console.log('Request details:', request)
+        console.log('Request error:', requestError)
+
+        if (request && !requestError) {
           // Create friendship
-          await supabase
+          const { data: friendshipData, error: friendshipError } = await supabase
             .from('friendships')
             .insert([{
               user_id: request.sender_id,
               friend_id: request.receiver_id,
               status: 'accepted'
             }])
+            .select()
+
+          console.log('Friendship created:', friendshipData)
+          console.log('Friendship error:', friendshipError)
+
+          if (friendshipError) {
+            console.error('Failed to create friendship:', friendshipError)
+            setMessage('Error creating friendship: ' + friendshipError.message)
+            return
+          }
         }
       }
 
       // Update request status
-      await supabase
+      const { error: updateError } = await supabase
         .from('friend_requests')
         .update({ status: response })
         .eq('id', requestId)
+
+      console.log('Request update error:', updateError)
+
+      if (updateError) {
+        console.error('Failed to update request:', updateError)
+        setMessage('Error updating request: ' + updateError.message)
+        return
+      }
 
       await loadPendingRequests()
       await loadFriends()
       setMessage(`Friend request ${response}!`)
     } catch (error) {
+      console.error('Error responding to request:', error)
       setMessage('Error responding to request: ' + error.message)
     } finally {
       setLoading(false)
