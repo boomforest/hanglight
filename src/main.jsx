@@ -162,54 +162,37 @@ function HanglightApp() {
   }
 
   const loadPendingRequests = async (client = supabase) => {
-    if (!user) return
+    console.log('=== INSIDE loadPendingRequests ===')
+    console.log('User check:', user)
+    console.log('Client check:', client)
     
-    try {
-      console.log('Loading pending requests for:', user.id)
-      
-      // First, let's try the real query
-      const { data, error } = await client
-        .from('friend_requests')
-        .select(`
-          id,
-          message,
-          created_at,
-          sender:profiles!sender_id(username, email)
-        `)
-        .eq('receiver_id', user.id)
-        .eq('status', 'pending')
-      
-      console.log('Real pending requests:', data)
-      console.log('Requests error:', error)
-      
-      // For now, let's also add some fake data to test the UI
-      const fakeRequests = [
-        {
-          id: 'fake-1',
-          message: 'Hey! Let\'s be friends on Hanglight!',
-          created_at: new Date().toISOString(),
-          sender: { username: 'TEST001', email: 'test@example.com' }
-        },
-        {
-          id: 'fake-2', 
-          message: 'Would love to connect!',
-          created_at: new Date().toISOString(),
-          sender: { username: 'DEMO123', email: 'demo@example.com' }
-        }
-      ]
-      
-      console.log('Setting fake requests for testing')
-      setPendingRequests(fakeRequests)
-      
-      // If real data exists, use that instead
-      if (!error && data && data.length > 0) {
-        console.log('Found real requests, using those instead')
-        setPendingRequests(data)
-      }
-      
-    } catch (error) {
-      console.error('Error loading requests:', error)
+    if (!user) {
+      console.log('No user, returning early')
+      return
     }
+    
+    console.log('User ID:', user.id)
+    console.log('About to set fake requests...')
+    
+    // Just set fake data immediately to test
+    const fakeRequests = [
+      {
+        id: 'fake-1',
+        message: 'Hey! Let\'s be friends on Hanglight!',
+        created_at: new Date().toISOString(),
+        sender: { username: 'TEST001', email: 'test@example.com' }
+      },
+      {
+        id: 'fake-2', 
+        message: 'Would love to connect!',
+        created_at: new Date().toISOString(),
+        sender: { username: 'DEMO123', email: 'demo@example.com' }
+      }
+    ]
+    
+    console.log('Setting fake requests:', fakeRequests)
+    setPendingRequests(fakeRequests)
+    console.log('Fake requests set!')
   }
 
   const updateStatusLight = async (newStatus) => {
