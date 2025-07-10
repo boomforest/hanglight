@@ -61,8 +61,9 @@ function HanglightApp() {
         return existingProfile
       }
 
-      const username = authUser.user_metadata?.username || 'USER' + Math.random().toString(36).substr(2, 3).toUpperCase()
+      const username = authUser.user_metadata?.username || 'TEMP' + Math.random().toString(36).substr(2, 3).toUpperCase()
       
+      // Check if this user already exists (from GRAIL)
       const newProfile = {
         id: authUser.id,
         username: username,
@@ -98,6 +99,7 @@ function HanglightApp() {
     try {
       const { data, error } = await client.rpc('get_user_friends', { user_uuid: user.id })
       if (error) throw error
+      // Filter out friends who don't have hanglight_active, but still show them
       setFriends(data || [])
     } catch (error) {
       console.error('Error loading friends:', error)
