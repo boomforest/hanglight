@@ -1040,6 +1040,18 @@ function HanglightApp() {
               ))}
             </div>
           )}
+
+          {/* Footer */}
+          <div style={{
+            position: 'fixed',
+            bottom: '1rem',
+            left: '1rem',
+            fontSize: '0.7rem',
+            color: '#666',
+            fontFamily: 'monospace'
+          }}>
+            Grail // Antisocial Media XXV
+          </div>
         </div>
       </div>
     )
