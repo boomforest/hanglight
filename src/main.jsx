@@ -6,7 +6,6 @@ function HanglightApp() {
   const [supabase, setSupabase] = useState(null)
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
-  const [friends, setFriends] = useState([])
   const [activeTab, setActiveTab] = useState('login')
   const [showAddFriend, setShowAddFriend] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
@@ -86,9 +85,9 @@ function HanglightApp() {
           setUser(session.user)
           console.log('About to call ensureProfileExists...')
           await ensureProfileExists(session.user, client)
-          console.log('About to call loadFriends...')
-          await loadFriends(client)
-          console.log('loadFriends completed')
+          console.log('About to call loadPendingRequests...')
+          await loadPendingRequests(client)
+          console.log('loadPendingRequests completed')
         } else {
           console.log('No user in session')
         }
@@ -162,71 +161,54 @@ function HanglightApp() {
     }
   }
 
-  const loadFriends = async (client = supabase) => {
+  const loadPendingRequests = async (client = supabase) => {
     if (!user) return
+    
     try {
-      console.log('Loading friends for user:', user.id)
+      console.log('Loading pending requests for:', user.id)
       
-      // Get accepted friends - simplified query
-      const { data: friendsData, error: friendsError } = await client
-        .from('friendships')
-        .select(`
-          *,
-          friend_profile:profiles!friend_id(id, username, email, status_light, last_status_update)
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'accepted')
-      
-      if (friendsError) {
-        console.error('Friends error:', friendsError)
-      }
-      console.log('Friends data:', friendsData)
-
-      // Get pending friend requests where user is the receiver
-      const { data: requestsData, error: requestsError } = await client
+      // First, let's try the real query
+      const { data, error } = await client
         .from('friend_requests')
         .select(`
           id,
           message,
           created_at,
-          sender:profiles!sender_id(id, username, email, status_light, last_status_update)
+          sender:profiles!sender_id(username, email)
         `)
         .eq('receiver_id', user.id)
         .eq('status', 'pending')
       
-      if (requestsError) {
-        console.error('Requests error:', requestsError)
-      }
-      console.log('Requests data:', requestsData)
-
-      // Combine friends and pending requests
-      const allItems = [
-        ...(friendsData || []).map(friendship => ({
-          friend_id: friendship.friend_profile.id,
-          username: friendship.friend_profile.username,
-          email: friendship.friend_profile.email,
-          status_light: friendship.friend_profile.status_light || 'red',
-          last_status_update: friendship.friend_profile.last_status_update,
-          friendship_created_at: friendship.created_at,
-          type: 'friend'
-        })),
-        ...(requestsData || []).map(request => ({
-          friend_id: request.sender.id,
-          username: request.sender.username,
-          email: request.sender.email,
-          status_light: request.sender.status_light || 'red',
-          last_status_update: request.sender.last_status_update,
-          friendship_created_at: request.created_at,
-          request_id: request.id,
-          request_message: request.message,
-          type: 'request'
-        }))
+      console.log('Real pending requests:', data)
+      console.log('Requests error:', error)
+      
+      // For now, let's also add some fake data to test the UI
+      const fakeRequests = [
+        {
+          id: 'fake-1',
+          message: 'Hey! Let\'s be friends on Hanglight!',
+          created_at: new Date().toISOString(),
+          sender: { username: 'TEST001', email: 'test@example.com' }
+        },
+        {
+          id: 'fake-2', 
+          message: 'Would love to connect!',
+          created_at: new Date().toISOString(),
+          sender: { username: 'DEMO123', email: 'demo@example.com' }
+        }
       ]
-
-      console.log('Combined items:', allItems)
-      setFriends(allItems)
+      
+      console.log('Setting fake requests for testing')
+      setPendingRequests(fakeRequests)
+      
+      // If real data exists, use that instead
+      if (!error && data && data.length > 0) {
+        console.log('Found real requests, using those instead')
+        setPendingRequests(data)
+      }
+      
     } catch (error) {
-      console.error('Error loading friends:', error)
+      console.error('Error loading requests:', error)
     }
   }
 
@@ -482,8 +464,8 @@ function HanglightApp() {
       
       console.log('About to call ensureProfileExists after login...')
       await ensureProfileExists(data.user)
-      console.log('About to call loadFriends after login...')
-      await loadFriends()
+      console.log('About to call loadPendingRequests after login...')
+      await loadPendingRequests()
       console.log('Login process complete')
       
       setFormData({ email: '', password: '', username: '' })
@@ -501,7 +483,6 @@ function HanglightApp() {
     }
     setUser(null)
     setProfile(null)
-    setFriends([])
     setPendingRequests([])
     setShowAddFriend(false)
     setShowMenu(false)
@@ -526,17 +507,6 @@ function HanglightApp() {
       case 'red': return 'Not available'
       default: return 'Unknown'
     }
-  }
-
-  const formatTimeAgo = (timestamp) => {
-    const now = new Date()
-    const time = new Date(timestamp)
-    const diffInMinutes = Math.floor((now - time) / (1000 * 60))
-    
-    if (diffInMinutes < 1) return 'Just now'
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
-    return `${Math.floor(diffInMinutes / 1440)}d ago`
   }
 
   // Add Friend Modal
