@@ -59,13 +59,29 @@ function HanglightApp() {
         .single()
 
       if (existingProfile) {
-        setProfile(existingProfile)
+        // Update existing profile to mark as hanglight active
+        const { data: updatedProfile, error: updateError } = await client
+          .from('profiles')
+          .update({ 
+            hanglight_active: true,
+            status_light: existingProfile.status_light || 'red'
+          })
+          .eq('id', authUser.id)
+          .select()
+          .single()
+
+        if (updateError) {
+          console.error('Error updating profile:', updateError)
+          setProfile(existingProfile)
+        } else {
+          setProfile(updatedProfile)
+        }
         return existingProfile
       }
 
+      // Only create new profile if doesn't exist (new user)
       const username = authUser.user_metadata?.username || 'TEMP' + Math.random().toString(36).substr(2, 3).toUpperCase()
       
-      // Check if this user already exists (from GRAIL)
       const newProfile = {
         id: authUser.id,
         username: username,
@@ -99,33 +115,49 @@ function HanglightApp() {
   const loadFriends = async (client = supabase) => {
     if (!user) return
     try {
-      const { data, error } = await client.rpc('get_user_friends', { user_uuid: user.id })
-      if (error) throw error
-      // Filter out friends who don't have hanglight_active, but still show them
-      setFriends(data || [])
+      // Get accepted friends
+      const { data: friendsData, error: friendsError } = await client.rpc('get_user_friends', { user_uuid: user.id })
+      if (friendsError) throw friendsError
+
+      // Get pending friend requests where user is the receiver
+      const { data: requestsData, error: requestsError } = await client
+        .from('friend_requests')
+        .select(`
+          id,
+          message,
+          created_at,
+          sender:profiles!sender_id(id, username, email, status_light, last_status_update)
+        `)
+        .eq('receiver_id', user.id)
+        .eq('status', 'pending')
+      
+      if (requestsError) throw requestsError
+
+      // Combine friends and pending requests
+      const allItems = [
+        ...(friendsData || []).map(friend => ({ ...friend, type: 'friend' })),
+        ...(requestsData || []).map(request => ({
+          friend_id: request.sender.id,
+          username: request.sender.username,
+          email: request.sender.email,
+          status_light: request.sender.status_light || 'red',
+          last_status_update: request.sender.last_status_update,
+          friendship_created_at: request.created_at,
+          request_id: request.id,
+          request_message: request.message,
+          type: 'request'
+        }))
+      ]
+
+      setFriends(allItems)
     } catch (error) {
       console.error('Error loading friends:', error)
     }
   }
 
   const loadFriendRequests = async (client = supabase) => {
-    if (!user) return
-    try {
-      const { data, error } = await client
-        .from('friend_requests')
-        .select(`
-          *,
-          sender:profiles!sender_id(username, email),
-          receiver:profiles!receiver_id(username, email)
-        `)
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .eq('status', 'pending')
-      
-      if (error) throw error
-      setFriendRequests(data || [])
-    } catch (error) {
-      console.error('Error loading friend requests:', error)
-    }
+    // This function is now handled in loadFriends() - keeping for compatibility
+    return
   }
 
   const updateStatusLight = async (newStatus) => {
@@ -216,7 +248,7 @@ function HanglightApp() {
       setMessage(`Friend request sent to ${targetUser.username}!`)
       setAddFriendData({ identifier: '', message: '' })
       setShowAddFriend(false)
-      await loadFriendRequests()
+      await loadFriends()
     } catch (error) {
       setMessage('Error sending friend request: ' + error.message)
     } finally {
@@ -257,7 +289,6 @@ function HanglightApp() {
         .eq('id', requestId)
 
       await loadFriends()
-      await loadFriendRequests()
       setMessage(`Friend request ${response}!`)
     } catch (error) {
       setMessage('Error responding to request: ' + error.message)
@@ -312,7 +343,6 @@ function HanglightApp() {
       if (profile) {
         setUser(authData.user)
         await loadFriends()
-        await loadFriendRequests()
         setMessage('Welcome to Hanglight!')
         setFormData({ email: '', password: '', username: '' })
       } else {
@@ -354,7 +384,6 @@ function HanglightApp() {
       setUser(data.user)
       await ensureProfileExists(data.user)
       await loadFriends()
-      await loadFriendRequests()
       setFormData({ email: '', password: '', username: '' })
     } catch (err) {
       setMessage('Login error: ' + err.message)
@@ -701,71 +730,7 @@ function HanglightApp() {
             + Add Friend
           </button>
 
-          {/* Friend Requests */}
-          {friendRequests.length > 0 && (
-            <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{ 
-                fontSize: '1.2rem', 
-                color: 'white', 
-                marginBottom: '1rem',
-                fontWeight: 'normal'
-              }}>
-                Friend Requests
-              </h3>
-              {friendRequests.map(request => (
-                <div key={request.id} style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: '15px',
-                  padding: '1rem',
-                  marginBottom: '0.5rem'
-                }}>
-                  <div style={{ fontWeight: '500', marginBottom: '0.5rem' }}>
-                    {request.sender_id === user.id ? 
-                      `To: ${request.receiver.username}` : 
-                      `From: ${request.sender.username}`
-                    }
-                  </div>
-                  {request.message && (
-                    <div style={{ fontSize: '0.9rem', color: '#ccc', marginBottom: '0.5rem' }}>
-                      "{request.message}"
-                    </div>
-                  )}
-                  {request.receiver_id === user.id && (
-                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                      <button
-                        onClick={() => respondToFriendRequest(request.id, 'accepted')}
-                        style={{
-                          background: '#28a745',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '10px',
-                          padding: '0.5rem 1rem',
-                          fontSize: '0.8rem',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        onClick={() => respondToFriendRequest(request.id, 'declined')}
-                        style={{
-                          background: '#dc3545',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '10px',
-                          padding: '0.5rem 1rem',
-                          fontSize: '0.8rem',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Decline
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          {/* Friend Requests - Now removed since they're inline */}
 
           {/* Friends List */}
           <div>
@@ -775,7 +740,7 @@ function HanglightApp() {
               marginBottom: '1rem',
               fontWeight: 'normal'
             }}>
-              Friends ({friends.length})
+              Friends ({friends.filter(f => f.type === 'friend').length})
             </h3>
             
             {friends.length === 0 ? (
@@ -790,33 +755,95 @@ function HanglightApp() {
             ) : (
               friends.map(friend => (
                 <div key={friend.friend_id} style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
+                  background: friend.type === 'request' ? 'rgba(255, 193, 7, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                  border: friend.type === 'request' ? '1px solid #ffc107' : 'none',
                   borderRadius: '15px',
                   padding: '1rem',
-                  marginBottom: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
+                  marginBottom: '0.5rem'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div
-                      style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        backgroundColor: getStatusColor(friend.status_light)
-                      }}
-                    />
-                    <div style={{ textAlign: 'left' }}>
-                      <div style={{ fontWeight: '500' }}>{friend.username}</div>
-                      <div style={{ fontSize: '0.8rem', color: '#ccc' }}>
-                        {getStatusText(friend.status_light)}
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    marginBottom: friend.type === 'request' ? '0.5rem' : '0'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          backgroundColor: getStatusColor(friend.status_light)
+                        }}
+                      />
+                      <div style={{ textAlign: 'left' }}>
+                        <div style={{ fontWeight: '500' }}>
+                          {friend.username}
+                          {friend.type === 'request' && (
+                            <span style={{ 
+                              fontSize: '0.7rem', 
+                              color: '#ffc107',
+                              marginLeft: '0.5rem'
+                            }}>
+                              • Friend Request
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: '#ccc' }}>
+                          {friend.type === 'request' ? 'Wants to be friends!' : getStatusText(friend.status_light)}
+                        </div>
                       </div>
                     </div>
+                    
+                    {friend.type === 'request' ? (
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => respondToFriendRequest(friend.request_id, 'accepted')}
+                          style={{
+                            background: '#28a745',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '0.4rem 0.8rem',
+                            fontSize: '0.7rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          onClick={() => respondToFriendRequest(friend.request_id, 'declined')}
+                          style={{
+                            background: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '0.4rem 0.8rem',
+                            fontSize: '0.7rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.7rem', color: '#999' }}>
+                        {formatTimeAgo(friend.last_status_update)}
+                      </div>
+                    )}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: '#999' }}>
-                    {formatTimeAgo(friend.last_status_update)}
-                  </div>
+                  
+                  {friend.type === 'request' && friend.request_message && (
+                    <div style={{ 
+                      fontSize: '0.8rem', 
+                      color: '#ccc', 
+                      fontStyle: 'italic',
+                      marginTop: '0.5rem',
+                      paddingLeft: '2rem'
+                    }}>
+                      "{friend.request_message}"
+                    </div>
+                  )}
                 </div>
               ))
             )}
