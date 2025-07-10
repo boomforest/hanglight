@@ -1,4 +1,4 @@
-// WalletInput.jsx - Create this file in src/
+// WalletInput.jsx for Hanglight - Create this file in src/
 import React, { useState } from 'react';
 
 const WalletInput = ({ onWalletSave, currentWallet }) => {
@@ -33,25 +33,26 @@ const WalletInput = ({ onWalletSave, currentWallet }) => {
 
   return (
     <div style={{
-      background: 'rgba(240, 240, 240, 0.5)',
+      background: 'rgba(255, 255, 255, 0.05)',
       borderRadius: '10px',
       padding: '1rem',
-      marginBottom: '1rem'
+      marginBottom: '1rem',
+      border: '1px solid rgba(255, 255, 255, 0.1)'
     }}>
-      <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#333' }}>
+      <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'white' }}>
         🔗 Wallet Address
       </h4>
       
       {currentWallet ? (
         <div>
           <div style={{
-            background: 'rgba(40, 167, 69, 0.1)',
+            background: 'rgba(40, 167, 69, 0.2)',
             border: '1px solid #28a745',
             borderRadius: '8px',
             padding: '0.5rem',
             marginBottom: '0.5rem',
             fontSize: '0.8rem',
-            color: '#155724'
+            color: '#90ee90'
           }}>
             Connected: {formatAddress(currentWallet)}
           </div>
@@ -82,19 +83,21 @@ const WalletInput = ({ onWalletSave, currentWallet }) => {
             style={{
               width: '100%',
               padding: '0.5rem',
-              border: '1px solid #ccc',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
               borderRadius: '6px',
               fontSize: '0.8rem',
               marginBottom: '0.5rem',
               boxSizing: 'border-box',
-              fontFamily: 'monospace'
+              fontFamily: 'monospace',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              color: 'white'
             }}
           />
           <button
             onClick={handleSave}
             disabled={isSaving || !walletAddress.trim()}
             style={{
-              background: '#007bff',
+              background: '#28a745',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
