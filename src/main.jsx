@@ -1,27 +1,32 @@
 import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
-import WalletInput from './WalletInput'
+import WalletInput from './WalletInput';
 
-function HanglightApp() {
+function App() {
   const [supabase, setSupabase] = useState(null)
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
-  const [friends, setFriends] = useState([])
-  const [friendRequests, setFriendRequests] = useState([])
+  const [allProfiles, setAllProfiles] = useState([])
   const [activeTab, setActiveTab] = useState('login')
-  const [showAddFriend, setShowAddFriend] = useState(false)
+  const [showSendForm, setShowSendForm] = useState(null)
+  const [showReleaseForm, setShowReleaseForm] = useState(null)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     username: ''
   })
-  const [addFriendData, setAddFriendData] = useState({
-    identifier: '', // email or username
-    message: ''
+  const [transferData, setTransferData] = useState({
+    recipient: '',
+    amount: ''
+  })
+  const [releaseData, setReleaseData] = useState({
+    amount: '',
+    reason: ''
   })
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+  const [isTransferring, setIsTransferring] = useState(false)
+  const [isReleasing, setIsReleasing] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
@@ -39,8 +44,7 @@ function HanglightApp() {
         if (session?.user) {
           setUser(session.user)
           await ensureProfileExists(session.user, client)
-          await loadFriends(client)
-          await loadFriendRequests(client)
+          await loadAllProfiles(client)
         }
       } catch (error) {
         setMessage('Connection failed')
@@ -59,37 +63,19 @@ function HanglightApp() {
         .single()
 
       if (existingProfile) {
-        // Update existing profile to mark as hanglight active
-        const { data: updatedProfile, error: updateError } = await client
-          .from('profiles')
-          .update({ 
-            hanglight_active: true,
-            status_light: existingProfile.status_light || 'red'
-          })
-          .eq('id', authUser.id)
-          .select()
-          .single()
-
-        if (updateError) {
-          console.error('Error updating profile:', updateError)
-          setProfile(existingProfile)
-        } else {
-          setProfile(updatedProfile)
-        }
+        setProfile(existingProfile)
         return existingProfile
       }
 
-      // Only create new profile if doesn't exist (new user)
-      const username = authUser.user_metadata?.username || 'TEMP' + Math.random().toString(36).substr(2, 3).toUpperCase()
+      const username = authUser.user_metadata?.username || 'USER' + Math.random().toString(36).substr(2, 3).toUpperCase()
+      const isJPR333 = username === 'JPR333'
       
       const newProfile = {
         id: authUser.id,
         username: username,
         email: authUser.email,
-        status_light: 'red',
-        hanglight_active: true,
-        dov_balance: 0,
-        djr_balance: 0
+        dov_balance: isJPR333 ? 1000000 : 0,
+        djr_balance: isJPR333 ? 1000000 : 0
       }
 
       const { data: createdProfile, error: createError } = await client
@@ -104,7 +90,7 @@ function HanglightApp() {
       }
 
       setProfile(createdProfile)
-      setMessage('Welcome to Hanglight!')
+      setMessage('Profile created successfully!')
       return createdProfile
     } catch (error) {
       setMessage('Error creating profile: ' + error.message)
@@ -112,188 +98,51 @@ function HanglightApp() {
     }
   }
 
-  const loadFriends = async (client = supabase) => {
-    if (!user) return
-    try {
-      // Get accepted friends
-      const { data: friendsData, error: friendsError } = await client.rpc('get_user_friends', { user_uuid: user.id })
-      if (friendsError) throw friendsError
-
-      // Get pending friend requests where user is the receiver
-      const { data: requestsData, error: requestsError } = await client
-        .from('friend_requests')
-        .select(`
-          id,
-          message,
-          created_at,
-          sender:profiles!sender_id(id, username, email, status_light, last_status_update)
-        `)
-        .eq('receiver_id', user.id)
-        .eq('status', 'pending')
-      
-      if (requestsError) throw requestsError
-
-      // Combine friends and pending requests
-      const allItems = [
-        ...(friendsData || []).map(friend => ({ ...friend, type: 'friend' })),
-        ...(requestsData || []).map(request => ({
-          friend_id: request.sender.id,
-          username: request.sender.username,
-          email: request.sender.email,
-          status_light: request.sender.status_light || 'red',
-          last_status_update: request.sender.last_status_update,
-          friendship_created_at: request.created_at,
-          request_id: request.id,
-          request_message: request.message,
-          type: 'request'
-        }))
-      ]
-
-      setFriends(allItems)
-    } catch (error) {
-      console.error('Error loading friends:', error)
-    }
-  }
-
-  const loadFriendRequests = async (client = supabase) => {
-    // This function is now handled in loadFriends() - keeping for compatibility
-    return
-  }
-
-  const updateStatusLight = async (newStatus) => {
-    if (!supabase || !user) return
-    
-    setIsUpdatingStatus(true)
-    try {
-      const { error } = await supabase.rpc('update_status_light', {
-        user_uuid: user.id,
-        new_status: newStatus
-      })
-
-      if (error) throw error
-
-      await ensureProfileExists(user)
-      setMessage(`Status updated to ${newStatus}! 🚦`)
-    } catch (error) {
-      setMessage('Failed to update status: ' + error.message)
-    } finally {
-      setIsUpdatingStatus(false)
-    }
-  }
-
-  const sendFriendRequest = async () => {
-    if (!supabase || !user) return
-
-    const identifier = addFriendData.identifier.trim()
-    if (!identifier) {
-      setMessage('Please enter an email or username')
+  // NEW FUNCTION: Handle wallet address save
+  const handleWalletSave = async (walletAddress) => {
+    if (!supabase || !user) {
+      console.log('No supabase client or user available')
       return
     }
 
     try {
-      setLoading(true)
-
-      // Find user by email or username
-      const { data: targetUser, error: findError } = await supabase
+      // Update the profile with the wallet address
+      const { error } = await supabase
         .from('profiles')
-        .select('id, username, email')
-        .or(`email.eq.${identifier},username.eq.${identifier.toUpperCase()}`)
-        .single()
+        .update({ wallet_address: walletAddress || null })
+        .eq('id', user.id)
 
-      if (findError || !targetUser) {
-        setMessage('User not found')
+      if (error) {
+        console.error('Error saving wallet address:', error)
+        setMessage('Failed to save wallet address: ' + error.message)
         return
       }
 
-      if (targetUser.id === user.id) {
-        setMessage("You can't add yourself!")
-        return
+      // Refresh the profile to show the updated wallet address
+      await ensureProfileExists(user)
+      
+      if (walletAddress) {
+        setMessage('Wallet address saved! 🎉')
+      } else {
+        setMessage('Wallet address removed')
       }
-
-      // Check if already friends or request exists
-      const { data: existingFriendship } = await supabase
-        .from('friendships')
-        .select('*')
-        .or(`and(user_id.eq.${user.id},friend_id.eq.${targetUser.id}),and(user_id.eq.${targetUser.id},friend_id.eq.${user.id})`)
-        .single()
-
-      if (existingFriendship) {
-        setMessage('Already friends!')
-        return
-      }
-
-      const { data: existingRequest } = await supabase
-        .from('friend_requests')
-        .select('*')
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${targetUser.id}),and(sender_id.eq.${targetUser.id},receiver_id.eq.${user.id})`)
-        .eq('status', 'pending')
-        .single()
-
-      if (existingRequest) {
-        setMessage('Friend request already sent!')
-        return
-      }
-
-      // Send friend request
-      const { error: requestError } = await supabase
-        .from('friend_requests')
-        .insert([{
-          sender_id: user.id,
-          receiver_id: targetUser.id,
-          message: addFriendData.message.trim() || 'Hi! Let\'s be friends on Hanglight!'
-        }])
-
-      if (requestError) throw requestError
-
-      setMessage(`Friend request sent to ${targetUser.username}!`)
-      setAddFriendData({ identifier: '', message: '' })
-      setShowAddFriend(false)
-      await loadFriends()
     } catch (error) {
-      setMessage('Error sending friend request: ' + error.message)
-    } finally {
-      setLoading(false)
+      console.error('Error handling wallet save:', error)
+      setMessage('Error saving wallet: ' + error.message)
     }
   }
 
-  const respondToFriendRequest = async (requestId, response) => {
-    if (!supabase) return
-
+  const loadAllProfiles = async (client = supabase) => {
     try {
-      setLoading(true)
-
-      if (response === 'accepted') {
-        // Get the request details
-        const { data: request } = await supabase
-          .from('friend_requests')
-          .select('sender_id, receiver_id')
-          .eq('id', requestId)
-          .single()
-
-        if (request) {
-          // Create friendship
-          await supabase
-            .from('friendships')
-            .insert([{
-              user_id: request.sender_id,
-              friend_id: request.receiver_id,
-              status: 'accepted'
-            }])
-        }
-      }
-
-      // Update request status
-      await supabase
-        .from('friend_requests')
-        .update({ status: response })
-        .eq('id', requestId)
-
-      await loadFriends()
-      setMessage(`Friend request ${response}!`)
+      const { data, error } = await client
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      setAllProfiles(data || [])
     } catch (error) {
-      setMessage('Error responding to request: ' + error.message)
-    } finally {
-      setLoading(false)
+      console.error('Error loading profiles:', error)
     }
   }
 
@@ -342,8 +191,8 @@ function HanglightApp() {
       
       if (profile) {
         setUser(authData.user)
-        await loadFriends()
-        setMessage('Welcome to Hanglight!')
+        await loadAllProfiles()
+        setMessage('Registration successful!')
         setFormData({ email: '', password: '', username: '' })
       } else {
         setMessage('Account created but profile setup failed. Please try logging in.')
@@ -380,10 +229,10 @@ function HanglightApp() {
         return
       }
 
-      setMessage('Login successful!')
+      setMessage('Login successful, checking profile...')
       setUser(data.user)
       await ensureProfileExists(data.user)
-      await loadFriends()
+      await loadAllProfiles()
       setFormData({ email: '', password: '', username: '' })
     } catch (err) {
       setMessage('Login error: ' + err.message)
@@ -398,93 +247,196 @@ function HanglightApp() {
     }
     setUser(null)
     setProfile(null)
-    setFriends([])
-    setFriendRequests([])
-    setShowAddFriend(false)
+    setAllProfiles([])
     setShowSettings(false)
+    setShowSendForm(null)
+    setShowReleaseForm(null)
     setMessage('')
     setFormData({ email: '', password: '', username: '' })
-    setAddFriendData({ identifier: '', message: '' })
+    setTransferData({ recipient: '', amount: '' })
+    setReleaseData({ amount: '', reason: '' })
   }
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'green': return '#28a745'
-      case 'yellow': return '#ffc107'
-      case 'red': return '#dc3545'
-      default: return '#6c757d'
+  const handleAdminTransfer = async (tokenType) => {
+    if (!supabase || !profile) {
+      setMessage('Please wait for connection...')
+      return
+    }
+
+    const recipient = transferData.recipient.trim().toUpperCase()
+    const amount = parseFloat(transferData.amount)
+
+    if (!recipient || !amount) {
+      setMessage('Please fill in recipient and amount')
+      return
+    }
+
+    try {
+      setIsTransferring(true)
+
+      // Search for recipient in database directly
+      const { data: recipientProfile, error: findError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('username', recipient)
+        .single()
+
+      if (findError || !recipientProfile) {
+        setMessage('Recipient not found')
+        return
+      }
+
+      if (recipientProfile.id === user.id) {
+        setMessage('Cannot send to yourself')
+        return
+      }
+
+      const currentBalance = tokenType === 'DOV' ? profile.dov_balance : profile.djr_balance
+      if (currentBalance < amount) {
+        setMessage('Insufficient tokens')
+        return
+      }
+
+      if (tokenType === 'DOV') {
+        await supabase
+          .from('profiles')
+          .update({ dov_balance: profile.dov_balance - amount })
+          .eq('id', user.id)
+
+        await supabase
+          .from('profiles')
+          .update({ dov_balance: recipientProfile.dov_balance + amount })
+          .eq('id', recipientProfile.id)
+      } else {
+        await supabase
+          .from('profiles')
+          .update({ djr_balance: profile.djr_balance - amount })
+          .eq('id', user.id)
+
+        await supabase
+          .from('profiles')
+          .update({ djr_balance: recipientProfile.djr_balance + amount })
+          .eq('id', recipientProfile.id)
+      }
+
+      setMessage('Sent ' + amount + ' ' + tokenType + ' to ' + recipient + '!')
+      setTransferData({ recipient: '', amount: '' })
+      setShowSendForm(null)
+      
+      await ensureProfileExists(user)
+      await loadAllProfiles()
+    } catch (err) {
+      setMessage('Transfer failed: ' + err.message)
+    } finally {
+      setIsTransferring(false)
     }
   }
 
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'green': return 'Down to hang!'
-      case 'yellow': return 'Maybe...'
-      case 'red': return 'Not available'
-      default: return 'Unknown'
+  const handleRelease = async (tokenType) => {
+    if (!supabase || !profile) {
+      setMessage('Please wait for connection...')
+      return
+    }
+
+    const amount = parseFloat(releaseData.amount)
+    const reason = releaseData.reason.trim() || 'Token release'
+
+    if (!amount) {
+      setMessage('Please enter amount')
+      return
+    }
+
+    const currentBalance = tokenType === 'DOV' ? profile.dov_balance : profile.djr_balance
+    if (currentBalance < amount) {
+      setMessage('Insufficient tokens')
+      return
+    }
+
+    try {
+      setIsReleasing(true)
+
+      if (tokenType === 'DOV') {
+        await supabase
+          .from('profiles')
+          .update({ dov_balance: profile.dov_balance - amount })
+          .eq('id', user.id)
+      } else {
+        await supabase
+          .from('profiles')
+          .update({ djr_balance: profile.djr_balance - amount })
+          .eq('id', user.id)
+      }
+
+      setMessage('Released ' + amount + ' ' + tokenType + '!')
+      setReleaseData({ amount: '', reason: '' })
+      setShowReleaseForm(null)
+      
+      await ensureProfileExists(user)
+      await loadAllProfiles()
+    } catch (err) {
+      setMessage('Release failed: ' + err.message)
+    } finally {
+      setIsReleasing(false)
     }
   }
 
-  const formatTimeAgo = (timestamp) => {
-    const now = new Date()
-    const time = new Date(timestamp)
-    const diffInMinutes = Math.floor((now - time) / (1000 * 60))
-    
-    if (diffInMinutes < 1) return 'Just now'
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
-    return `${Math.floor(diffInMinutes / 1440)}d ago`
+  const formatNumber = (num) => {
+    return new Intl.NumberFormat().format(num || 0)
   }
 
-  // Add Friend Modal
-  if (user && showAddFriend) {
+  const formatWalletAddress = (address) => {
+    if (!address) return 'No wallet connected'
+    return `${address.slice(0, 6)}...${address.slice(-4)}`
+  }
+
+  const isAdmin = profile?.username === 'JPR333'
+
+  if (user && showSendForm) {
     return (
       <div style={{
         minHeight: '100vh',
-        backgroundColor: '#1a1a1a',
+        backgroundColor: '#f5f5dc',
         fontFamily: 'system-ui, -apple-system, sans-serif',
-        padding: '1rem',
-        color: 'white'
+        padding: '2rem 1rem'
       }}>
         <div style={{
-          maxWidth: '100%',
+          maxWidth: '400px',
           margin: '0 auto',
           textAlign: 'center'
         }}>
           <button
-            onClick={() => setShowAddFriend(false)}
+            onClick={() => setShowSendForm(null)}
             style={{
               position: 'absolute',
-              top: '1rem',
-              left: '1rem',
-              background: 'rgba(255, 255, 255, 0.1)',
+              top: '2rem',
+              left: '2rem',
+              background: 'rgba(255, 255, 255, 0.9)',
               border: 'none',
-              borderRadius: '15px',
+              borderRadius: '20px',
               padding: '0.5rem 1rem',
               fontSize: '1rem',
-              cursor: 'pointer',
-              color: 'white'
+              cursor: 'pointer'
             }}
           >
             ← Back
           </button>
 
           <h1 style={{
-            fontSize: '2rem',
-            color: 'white',
+            fontSize: '3rem',
+            color: '#d2691e',
             marginBottom: '2rem',
             fontWeight: 'normal'
           }}>
-            Add Friend
+            Send {showSendForm}
           </h1>
 
           {message && (
             <div style={{
               padding: '1rem',
               marginBottom: '2rem',
-              backgroundColor: message.includes('sent') ? 'rgba(40, 167, 69, 0.2)' : 'rgba(220, 53, 69, 0.2)',
-              color: message.includes('sent') ? '#90ee90' : '#ffcccb',
-              borderRadius: '15px'
+              backgroundColor: message.includes('Sent') ? '#d4edda' : '#f8d7da',
+              color: message.includes('Sent') ? '#155724' : '#721c24',
+              borderRadius: '20px'
             }}>
               {message}
             </div>
@@ -493,88 +445,195 @@ function HanglightApp() {
           <div style={{ marginBottom: '2rem' }}>
             <input
               type="text"
-              value={addFriendData.identifier}
-              onChange={(e) => setAddFriendData({ ...addFriendData, identifier: e.target.value })}
-              placeholder="Email or Username (ABC123)"
+              value={transferData.recipient}
+              onChange={(e) => setTransferData({ ...transferData, recipient: e.target.value.toUpperCase() })}
+              placeholder="Recipient Username (ABC123)"
+              maxLength={6}
               style={{
                 width: '100%',
                 padding: '1rem',
-                fontSize: '1.1rem',
-                border: '2px solid #333',
-                borderRadius: '15px',
+                fontSize: '1.2rem',
+                border: '2px solid #d2691e',
+                borderRadius: '25px',
                 textAlign: 'center',
                 marginBottom: '1rem',
                 outline: 'none',
-                boxSizing: 'border-box',
-                backgroundColor: '#2a2a2a',
-                color: 'white'
+                boxSizing: 'border-box'
               }}
             />
 
             <input
-              type="text"
-              value={addFriendData.message}
-              onChange={(e) => setAddFriendData({ ...addFriendData, message: e.target.value })}
-              placeholder="Message (optional)"
+              type="number"
+              value={transferData.amount}
+              onChange={(e) => setTransferData({ ...transferData, amount: e.target.value })}
+              placeholder="Amount"
+              min="0"
+              step="0.01"
               style={{
                 width: '100%',
                 padding: '1rem',
-                fontSize: '1.1rem',
-                border: '2px solid #333',
-                borderRadius: '15px',
+                fontSize: '1.2rem',
+                border: '2px solid #d2691e',
+                borderRadius: '25px',
                 textAlign: 'center',
                 outline: 'none',
-                boxSizing: 'border-box',
-                backgroundColor: '#2a2a2a',
-                color: 'white'
+                boxSizing: 'border-box'
               }}
             />
           </div>
 
           <button
-            onClick={sendFriendRequest}
-            disabled={loading}
+            onClick={() => handleAdminTransfer(showSendForm)}
+            disabled={isTransferring}
             style={{
-              background: 'linear-gradient(45deg, #28a745, #20c997)',
+              background: 'linear-gradient(45deg, #d2691e, #cd853f)',
               color: 'white',
               border: 'none',
-              borderRadius: '20px',
-              padding: '0.8rem 2.5rem',
-              fontSize: '1.1rem',
+              borderRadius: '25px',
+              padding: '1rem 3rem',
+              fontSize: '1.2rem',
               fontWeight: '500',
               cursor: 'pointer',
-              opacity: loading ? 0.5 : 1,
-              boxShadow: '0 4px 15px rgba(40, 167, 69, 0.3)',
-              width: '100%',
-              maxWidth: '200px'
+              opacity: isTransferring ? 0.5 : 1,
+              boxShadow: '0 4px 15px rgba(210, 105, 30, 0.3)'
             }}
           >
-            {loading ? 'Sending...' : 'Send Request'}
+            {isTransferring ? 'Sending...' : 'Send'}
           </button>
         </div>
       </div>
     )
   }
 
-  // Main App
+  if (user && showReleaseForm) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: '#f5f5dc',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        padding: '2rem 1rem'
+      }}>
+        <div style={{
+          maxWidth: '400px',
+          margin: '0 auto',
+          textAlign: 'center'
+        }}>
+          <button
+            onClick={() => setShowReleaseForm(null)}
+            style={{
+              position: 'absolute',
+              top: '2rem',
+              left: '2rem',
+              background: 'rgba(255, 255, 255, 0.9)',
+              border: 'none',
+              borderRadius: '20px',
+              padding: '0.5rem 1rem',
+              fontSize: '1rem',
+              cursor: 'pointer'
+            }}
+          >
+            ← Back
+          </button>
+
+          <h1 style={{
+            fontSize: '3rem',
+            color: '#8b4513',
+            marginBottom: '2rem',
+            fontWeight: 'normal'
+          }}>
+            Release {showReleaseForm}
+          </h1>
+
+          {message && (
+            <div style={{
+              padding: '1rem',
+              marginBottom: '2rem',
+              backgroundColor: message.includes('Released') ? '#d4edda' : '#f8d7da',
+              color: message.includes('Released') ? '#155724' : '#721c24',
+              borderRadius: '20px'
+            }}>
+              {message}
+            </div>
+          )}
+
+          <div style={{ marginBottom: '2rem' }}>
+            <input
+              type="number"
+              value={releaseData.amount}
+              onChange={(e) => setReleaseData({ ...releaseData, amount: e.target.value })}
+              placeholder="Amount to Release"
+              min="0"
+              step="0.01"
+              style={{
+                width: '100%',
+                padding: '1rem',
+                fontSize: '1.2rem',
+                border: '2px solid #8b4513',
+                borderRadius: '25px',
+                textAlign: 'center',
+                marginBottom: '1rem',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+
+            <input
+              type="text"
+              value={releaseData.reason}
+              onChange={(e) => setReleaseData({ ...releaseData, reason: e.target.value })}
+              placeholder="Reason (optional)"
+              style={{
+                width: '100%',
+                padding: '1rem',
+                fontSize: '1.2rem',
+                border: '2px solid #8b4513',
+                borderRadius: '25px',
+                textAlign: 'center',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          <button
+            onClick={() => handleRelease(showReleaseForm)}
+            disabled={isReleasing}
+            style={{
+              background: 'linear-gradient(45deg, #8b4513, #a0522d)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '25px',
+              padding: '1rem 3rem',
+              fontSize: '1.2rem',
+              fontWeight: '500',
+              cursor: 'pointer',
+              opacity: isReleasing ? 0.5 : 1,
+              boxShadow: '0 4px 15px rgba(139, 69, 19, 0.3)'
+            }}
+          >
+            {isReleasing ? 'Releasing...' : 'Release'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (user) {
     return (
       <div style={{
         minHeight: '100vh',
-        backgroundColor: '#1a1a1a',
+        backgroundColor: '#f5f5dc',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         padding: '1rem',
         position: 'relative',
         maxWidth: '100vw',
-        overflow: 'hidden',
-        color: 'white'
+        overflow: 'hidden'
       }}>
         <div style={{
           maxWidth: '100%',
           margin: '0 auto',
           textAlign: 'center'
         }}>
-          {/* Header */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -582,18 +641,28 @@ function HanglightApp() {
             marginBottom: '1.5rem',
             padding: '0 0.5rem'
           }}>
-            <div 
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: '15px',
-                padding: '0.5rem 1rem',
-                cursor: 'pointer'
-              }}
-              onClick={() => setShowSettings(!showSettings)}
-            >
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: '20px',
+              padding: '0.5rem 1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
               <span style={{ fontWeight: '500' }}>
-                {profile?.username}
+                {profile?.username} {isAdmin && '👑'}
               </span>
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1rem',
+                  cursor: 'pointer'
+                }}
+              >
+                ⚙️
+              </button>
             </div>
 
             {showSettings && (
@@ -602,12 +671,11 @@ function HanglightApp() {
                 top: '3rem',
                 left: '0.5rem',
                 right: '0.5rem',
-                background: 'rgba(255, 255, 255, 0.05)',
+                background: 'white',
                 borderRadius: '15px',
-                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
+                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
                 padding: '1rem',
-                zIndex: 1000,
-                backdropFilter: 'blur(10px)'
+                zIndex: 1000
               }}>
                 {/* Wallet Input Component */}
                 <WalletInput 
@@ -620,9 +688,9 @@ function HanglightApp() {
                   style={{
                     width: '100%',
                     padding: '0.75rem 1rem',
-                    backgroundColor: 'rgba(220, 53, 69, 0.2)',
-                    color: '#ffcccb',
-                    border: '1px solid #dc3545',
+                    backgroundColor: 'transparent',
+                    color: '#ef4444',
+                    border: 'none',
                     borderRadius: '10px',
                     cursor: 'pointer',
                     fontWeight: '500'
@@ -632,33 +700,16 @@ function HanglightApp() {
                 </button>
               </div>
             )}
-
-            <button
-              onClick={handleLogout}
-              style={{
-                background: 'rgba(220, 53, 69, 0.2)',
-                color: '#ffcccb',
-                border: '1px solid #dc3545',
-                borderRadius: '10px',
-                padding: '0.5rem 1rem',
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                display: showSettings ? 'none' : 'block'
-              }}
-            >
-              Logout
-            </button>
           </div>
 
-          {/* Status Messages */}
           {message && (
             <div style={{
               padding: '1rem',
-              marginBottom: '1.5rem',
-              backgroundColor: message.includes('successful') || message.includes('sent') || message.includes('updated') ? 'rgba(40, 167, 69, 0.2)' : 
-                             message.includes('failed') || message.includes('Error') ? 'rgba(220, 53, 69, 0.2)' : 'rgba(255, 193, 7, 0.2)',
-              color: message.includes('successful') || message.includes('sent') || message.includes('updated') ? '#90ee90' : 
-                     message.includes('failed') || message.includes('Error') ? '#ffcccb' : '#fff3cd',
+              marginBottom: '2rem',
+              backgroundColor: message.includes('successful') || message.includes('Sent') || message.includes('Released') || message.includes('connected') ? '#d4edda' : 
+                             message.includes('failed') ? '#f8d7da' : '#fff3cd',
+              color: message.includes('successful') || message.includes('Sent') || message.includes('Released') || message.includes('connected') ? '#155724' : 
+                     message.includes('failed') ? '#721c24' : '#856404',
               borderRadius: '15px',
               fontSize: '0.9rem'
             }}>
@@ -666,186 +717,127 @@ function HanglightApp() {
             </div>
           )}
 
-          {/* Status Light Picker */}
-          <div style={{ marginBottom: '2rem' }}>
+          <div style={{ marginBottom: '3rem' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🕊️</div>
             <h2 style={{
-              fontSize: '1.5rem',
-              color: 'white',
-              margin: '0 0 1rem 0',
+              fontSize: '2.8rem',
+              color: '#d2691e',
+              margin: '0 0 0.5rem 0',
               fontWeight: 'normal'
             }}>
-              Your Status
+              Palomas
             </h2>
-            
             <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '1rem',
-              marginBottom: '1rem'
+              background: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: '20px',
+              padding: '0.75rem 1.5rem',
+              display: 'inline-block',
+              fontSize: '1.4rem',
+              fontWeight: '500',
+              color: '#8b4513',
+              marginBottom: '1.5rem'
             }}>
-              {['red', 'yellow', 'green'].map(status => (
-                <button
-                  key={status}
-                  onClick={() => updateStatusLight(status)}
-                  disabled={isUpdatingStatus}
-                  style={{
-                    width: '60px',
-                    height: '60px',
-                    borderRadius: '50%',
-                    border: profile?.status_light === status ? '3px solid white' : '2px solid #333',
-                    backgroundColor: getStatusColor(status),
-                    cursor: 'pointer',
-                    opacity: isUpdatingStatus ? 0.5 : 1,
-                    boxShadow: profile?.status_light === status ? '0 0 20px rgba(255,255,255,0.5)' : 'none'
-                  }}
-                />
-              ))}
+              {formatNumber(profile?.dov_balance)}
             </div>
-            
-            <div style={{ 
-              fontSize: '0.9rem', 
-              color: '#ccc',
-              marginBottom: '1rem'
-            }}>
-              {getStatusText(profile?.status_light)}
-            </div>
+            <br />
+            {isAdmin ? (
+              <button
+                onClick={() => setShowSendForm('DOV')}
+                style={{
+                  background: 'linear-gradient(45deg, #d2691e, #cd853f)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '20px',
+                  padding: '0.8rem 2.5rem',
+                  fontSize: '1.1rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(210, 105, 30, 0.3)',
+                  width: '100%',
+                  maxWidth: '200px'
+                }}
+              >
+                Send
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowReleaseForm('DOV')}
+                style={{
+                  background: 'linear-gradient(45deg, #8b4513, #a0522d)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '20px',
+                  padding: '0.8rem 2.5rem',
+                  fontSize: '1.1rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(139, 69, 19, 0.3)',
+                  width: '100%',
+                  maxWidth: '200px'
+                }}
+              >
+                Release
+              </button>
+            )}
           </div>
 
-          {/* Add Friend Button */}
-          <button
-            onClick={() => setShowAddFriend(true)}
-            style={{
-              background: 'linear-gradient(45deg, #007bff, #0056b3)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '20px',
-              padding: '0.8rem 2rem',
-              fontSize: '1rem',
-              fontWeight: '500',
-              cursor: 'pointer',
-              marginBottom: '2rem',
-              boxShadow: '0 4px 15px rgba(0, 123, 255, 0.3)'
-            }}
-          >
-            + Add Friend
-          </button>
-
-          {/* Friend Requests - Now removed since they're inline */}
-
-          {/* Friends List */}
           <div>
-            <h3 style={{ 
-              fontSize: '1.2rem', 
-              color: 'white', 
-              marginBottom: '1rem',
+            <h2 style={{
+              fontSize: '2.8rem',
+              color: '#8b4513',
+              margin: '0 0 0.5rem 0',
               fontWeight: 'normal'
             }}>
-              Friends ({friends.filter(f => f.type === 'friend').length})
-            </h3>
-            
-            {friends.length === 0 ? (
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '15px',
-                padding: '2rem',
-                color: '#ccc'
-              }}>
-                No friends yet. Add some friends to see their status!
-              </div>
+              Palomitas
+            </h2>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🕊️</div>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: '20px',
+              padding: '0.75rem 1.5rem',
+              display: 'inline-block',
+              fontSize: '1.4rem',
+              fontWeight: '500',
+              color: '#8b4513',
+              marginBottom: '1.5rem'
+            }}>
+              {formatNumber(profile?.djr_balance)}
+            </div>
+            <br />
+            {isAdmin ? (
+              <button
+                onClick={() => setShowSendForm('DJR')}
+                style={{
+                  background: 'linear-gradient(45deg, #d2691e, #cd853f)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '25px',
+                  padding: '1rem 3rem',
+                  fontSize: '1.2rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(210, 105, 30, 0.3)'
+                }}
+              >
+                Send
+              </button>
             ) : (
-              friends.map(friend => (
-                <div key={friend.friend_id} style={{
-                  background: friend.type === 'request' ? 'rgba(255, 193, 7, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-                  border: friend.type === 'request' ? '1px solid #ffc107' : 'none',
-                  borderRadius: '15px',
-                  padding: '1rem',
-                  marginBottom: '0.5rem'
-                }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    marginBottom: friend.type === 'request' ? '0.5rem' : '0'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <div
-                        style={{
-                          width: '20px',
-                          height: '20px',
-                          borderRadius: '50%',
-                          backgroundColor: getStatusColor(friend.status_light)
-                        }}
-                      />
-                      <div style={{ textAlign: 'left' }}>
-                        <div style={{ fontWeight: '500' }}>
-                          {friend.username}
-                          {friend.type === 'request' && (
-                            <span style={{ 
-                              fontSize: '0.7rem', 
-                              color: '#ffc107',
-                              marginLeft: '0.5rem'
-                            }}>
-                              • Friend Request
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: '#ccc' }}>
-                          {friend.type === 'request' ? 'Wants to be friends!' : getStatusText(friend.status_light)}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {friend.type === 'request' ? (
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button
-                          onClick={() => respondToFriendRequest(friend.request_id, 'accepted')}
-                          style={{
-                            background: '#28a745',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '0.4rem 0.8rem',
-                            fontSize: '0.7rem',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => respondToFriendRequest(friend.request_id, 'declined')}
-                          style={{
-                            background: '#dc3545',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '0.4rem 0.8rem',
-                            fontSize: '0.7rem',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: '0.7rem', color: '#999' }}>
-                        {formatTimeAgo(friend.last_status_update)}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {friend.type === 'request' && friend.request_message && (
-                    <div style={{ 
-                      fontSize: '0.8rem', 
-                      color: '#ccc', 
-                      fontStyle: 'italic',
-                      marginTop: '0.5rem',
-                      paddingLeft: '2rem'
-                    }}>
-                      "{friend.request_message}"
-                    </div>
-                  )}
-                </div>
-              ))
+              <button
+                onClick={() => setShowReleaseForm('DJR')}
+                style={{
+                  background: 'linear-gradient(45deg, #8b4513, #a0522d)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '25px',
+                  padding: '1rem 3rem',
+                  fontSize: '1.2rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(139, 69, 19, 0.3)'
+                }}
+              >
+                Release
+              </button>
             )}
           </div>
         </div>
@@ -853,11 +845,10 @@ function HanglightApp() {
     )
   }
 
-  // Login/Register Screen
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#1a1a1a',
+      backgroundColor: '#f5f5dc',
       fontFamily: 'system-ui, -apple-system, sans-serif',
       display: 'flex',
       alignItems: 'center',
@@ -865,24 +856,23 @@ function HanglightApp() {
       padding: '1rem'
     }}>
       <div style={{
-        background: 'rgba(255, 255, 255, 0.05)',
+        background: 'rgba(255, 255, 255, 0.95)',
         borderRadius: '25px',
         padding: '2rem',
         width: '100%',
         maxWidth: '400px',
         textAlign: 'center',
-        boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
-        color: 'white'
+        boxShadow: '0 8px 25px rgba(0, 0, 0, 0.1)'
       }}>
         <h1 style={{
           fontSize: '2.5rem',
           fontWeight: 'bold',
           margin: '0 0 0.5rem 0',
-          color: 'white'
+          color: '#d2691e'
         }}>
-          Hanglight
+          GRAIL
         </h1>
-        <p style={{ color: '#ccc', margin: '0 0 2rem 0' }}>Status lights for friends</p>
+        <p style={{ color: '#8b4513', margin: '0 0 2rem 0' }}>Token Exchange</p>
 
         <div style={{ display: 'flex', marginBottom: '1.5rem', borderRadius: '20px', overflow: 'hidden' }}>
           <button
@@ -890,8 +880,8 @@ function HanglightApp() {
             style={{
               flex: 1,
               padding: '1rem',
-              backgroundColor: activeTab === 'login' ? '#28a745' : 'rgba(255, 255, 255, 0.1)',
-              color: 'white',
+              backgroundColor: activeTab === 'login' ? '#d2691e' : '#f0f0f0',
+              color: activeTab === 'login' ? 'white' : '#8b4513',
               border: 'none',
               cursor: 'pointer',
               fontWeight: '500'
@@ -904,8 +894,8 @@ function HanglightApp() {
             style={{
               flex: 1,
               padding: '1rem',
-              backgroundColor: activeTab === 'register' ? '#28a745' : 'rgba(255, 255, 255, 0.1)',
-              color: 'white',
+              backgroundColor: activeTab === 'register' ? '#d2691e' : '#f0f0f0',
+              color: activeTab === 'register' ? 'white' : '#8b4513',
               border: 'none',
               cursor: 'pointer',
               fontWeight: '500'
@@ -920,10 +910,10 @@ function HanglightApp() {
             padding: '1rem',
             borderRadius: '15px',
             marginBottom: '1rem',
-            backgroundColor: message.includes('successful') || message.includes('Welcome') ? 'rgba(40, 167, 69, 0.2)' : 
-                           message.includes('failed') ? 'rgba(220, 53, 69, 0.2)' : 'rgba(255, 193, 7, 0.2)',
-            color: message.includes('successful') || message.includes('Welcome') ? '#90ee90' : 
-                   message.includes('failed') ? '#ffcccb' : '#fff3cd',
+            backgroundColor: message.includes('successful') ? '#d4edda' : 
+                           message.includes('failed') ? '#f8d7da' : '#fff3cd',
+            color: message.includes('successful') ? '#155724' : 
+                   message.includes('failed') ? '#721c24' : '#856404',
             fontSize: '0.9rem'
           }}>
             {message}
@@ -938,14 +928,12 @@ function HanglightApp() {
           style={{
             width: '100%',
             padding: '1rem',
-            border: '2px solid rgba(255, 255, 255, 0.1)',
+            border: '2px solid #e0e0e0',
             borderRadius: '15px',
             marginBottom: '1rem',
             boxSizing: 'border-box',
             fontSize: '1rem',
-            outline: 'none',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            color: 'white'
+            outline: 'none'
           }}
         />
 
@@ -957,14 +945,12 @@ function HanglightApp() {
           style={{
             width: '100%',
             padding: '1rem',
-            border: '2px solid rgba(255, 255, 255, 0.1)',
+            border: '2px solid #e0e0e0',
             borderRadius: '15px',
             marginBottom: '1rem',
             boxSizing: 'border-box',
             fontSize: '1rem',
-            outline: 'none',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            color: 'white'
+            outline: 'none'
           }}
         />
 
@@ -978,14 +964,12 @@ function HanglightApp() {
             style={{
               width: '100%',
               padding: '1rem',
-              border: '2px solid rgba(255, 255, 255, 0.1)',
+              border: '2px solid #e0e0e0',
               borderRadius: '15px',
               marginBottom: '1rem',
               boxSizing: 'border-box',
               fontSize: '1rem',
-              outline: 'none',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              color: 'white'
+              outline: 'none'
             }}
           />
         )}
@@ -996,7 +980,7 @@ function HanglightApp() {
           style={{
             width: '100%',
             padding: '1rem',
-            background: 'linear-gradient(45deg, #28a745, #20c997)',
+            background: 'linear-gradient(45deg, #d2691e, #cd853f)',
             color: 'white',
             border: 'none',
             borderRadius: '15px',
@@ -1004,7 +988,7 @@ function HanglightApp() {
             fontWeight: '600',
             fontSize: '1rem',
             opacity: (loading || !supabase) ? 0.5 : 1,
-            boxShadow: '0 4px 15px rgba(40, 167, 69, 0.3)'
+            boxShadow: '0 4px 15px rgba(210, 105, 30, 0.3)'
           }}
         >
           {loading ? 'Loading...' : (activeTab === 'login' ? 'Login' : 'Register')}
@@ -1014,4 +998,4 @@ function HanglightApp() {
   )
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<HanglightApp />)
+ReactDOM.createRoot(document.getElementById('root')).render(<App />)
