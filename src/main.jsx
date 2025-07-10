@@ -286,26 +286,39 @@ function HanglightApp() {
         return
       }
 
-      // Check if already friends using the friends table
-      const { data: existingFriend } = await supabase
-        .from('friends')
+      // Check if already friends
+      const { data: existingFriendship } = await supabase
+        .from('friendships')
         .select('*')
-        .eq('user_id', user.id)
-        .eq('friend_name', targetUser.username)
+        .or(`and(user_id.eq.${user.id},friend_id.eq.${targetUser.id}),and(user_id.eq.${targetUser.id},friend_id.eq.${user.id})`)
         .maybeSingle()
 
-      if (existingFriend) {
+      if (existingFriendship) {
+        setMessage('Already friends!')
+        return
+      }
+
+      // Check if request already exists
+      const { data: existingRequest } = await supabase
+        .from('friend_requests')
+        .select('*')
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${targetUser.id}),and(sender_id.eq.${targetUser.id},receiver_id.eq.${user.id})`)
+        .eq('status', 'pending')
+        .maybeSingle()
+
+      if (existingRequest) {
         setMessage('Friend request already sent!')
         return
       }
 
-      // Send friend request by inserting into friends table
+      // Send friend request
       const { error: requestError } = await supabase
-        .from('friends')
+        .from('friend_requests')
         .insert([{
-          user_id: user.id,
-          friend_name: targetUser.username,
-          status: 'maybe' // Using 'maybe' as pending status
+          sender_id: user.id,
+          receiver_id: targetUser.id,
+          message: addFriendData.message.trim() || 'Hi! Let\'s be friends on Hanglight!',
+          status: 'pending'
         }])
 
       if (requestError) throw requestError
@@ -328,18 +341,30 @@ function HanglightApp() {
       setLoading(true)
 
       if (response === 'accepted') {
-        // Update status to accepted
-        await supabase
-          .from('friends')
-          .update({ status: 'accepted' })
+        // Get the request details
+        const { data: request } = await supabase
+          .from('friend_requests')
+          .select('sender_id, receiver_id')
           .eq('id', requestId)
-      } else {
-        // Delete the friend request
-        await supabase
-          .from('friends')
-          .delete()
-          .eq('id', requestId)
+          .single()
+
+        if (request) {
+          // Create friendship
+          await supabase
+            .from('friendships')
+            .insert([{
+              user_id: request.sender_id,
+              friend_id: request.receiver_id,
+              status: 'accepted'
+            }])
+        }
       }
+
+      // Update request status
+      await supabase
+        .from('friend_requests')
+        .update({ status: response })
+        .eq('id', requestId)
 
       await loadFriends()
       setMessage(`Friend request ${response}!`)
