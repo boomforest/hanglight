@@ -86,8 +86,11 @@ function HanglightApp() {
           console.log('About to call ensureProfileExists...')
           await ensureProfileExists(session.user, client)
           console.log('About to call loadPendingRequests...')
-          await loadPendingRequests(client)
-          console.log('loadPendingRequests completed')
+          // Call loadPendingRequests AFTER setUser, but pass the user directly
+          setTimeout(async () => {
+            await loadPendingRequests(client, session.user)
+          }, 100)
+          console.log('loadPendingRequests scheduled')
         } else {
           console.log('No user in session')
         }
@@ -161,17 +164,18 @@ function HanglightApp() {
     }
   }
 
-  const loadPendingRequests = async (client = supabase) => {
+  const loadPendingRequests = async (client = supabase, userParam = null) => {
     console.log('=== INSIDE loadPendingRequests ===')
-    console.log('User check:', user)
+    const currentUser = userParam || user
+    console.log('User check:', currentUser)
     console.log('Client check:', client)
     
-    if (!user) {
+    if (!currentUser) {
       console.log('No user, returning early')
       return
     }
     
-    console.log('User ID:', user.id)
+    console.log('User ID:', currentUser.id)
     console.log('About to set fake requests...')
     
     // Just set fake data immediately to test
