@@ -7,7 +7,7 @@ function HanglightApp() {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [friends, setFriends] = useState([])
-  const [activeTab, setActi,veTab] = useState('login')
+  const [activeTab, setActiveTab] = useState('login')
   const [showAddFriend, setShowAddFriend] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [formData, setFormData] = useState({
