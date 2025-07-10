@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
+import WalletInput from './WalletInput'
 
 function HanglightApp() {
   const [supabase, setSupabase] = useState(null)
@@ -20,7 +21,7 @@ function HanglightApp() {
   })
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
     const initSupabase = async () => {
@@ -370,6 +371,7 @@ function HanglightApp() {
     setFriends([])
     setFriendRequests([])
     setShowAddFriend(false)
+    setShowSettings(false)
     setMessage('')
     setFormData({ email: '', password: '', username: '' })
     setAddFriendData({ identifier: '', message: '' })
@@ -550,15 +552,56 @@ function HanglightApp() {
             marginBottom: '1.5rem',
             padding: '0 0.5rem'
           }}>
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '15px',
-              padding: '0.5rem 1rem'
-            }}>
+            <div 
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '15px',
+                padding: '0.5rem 1rem',
+                cursor: 'pointer'
+              }}
+              onClick={() => setShowSettings(!showSettings)}
+            >
               <span style={{ fontWeight: '500' }}>
                 {profile?.username}
               </span>
             </div>
+
+            {showSettings && (
+              <div style={{
+                position: 'absolute',
+                top: '3rem',
+                left: '0.5rem',
+                right: '0.5rem',
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '15px',
+                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
+                padding: '1rem',
+                zIndex: 1000,
+                backdropFilter: 'blur(10px)'
+              }}>
+                {/* Wallet Input Component */}
+                <WalletInput 
+                  onWalletSave={handleWalletSave}
+                  currentWallet={profile?.wallet_address}
+                />
+                
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    backgroundColor: 'rgba(220, 53, 69, 0.2)',
+                    color: '#ffcccb',
+                    border: '1px solid #dc3545',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    fontWeight: '500'
+                  }}
+                >
+                  🚪 Logout
+                </button>
+              </div>
+            )}
 
             <button
               onClick={handleLogout}
@@ -569,7 +612,8 @@ function HanglightApp() {
                 borderRadius: '10px',
                 padding: '0.5rem 1rem',
                 fontSize: '0.9rem',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                display: showSettings ? 'none' : 'block'
               }}
             >
               Logout
