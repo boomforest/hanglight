@@ -244,8 +244,8 @@ function HanglightApp() {
     try {
       console.log('Loading friends for user:', currentUser.id)
       
-      // Get accepted friends from friendships table
-      const { data: friendsData, error: friendsError } = await client
+      // Get accepted friends from friendships table - check BOTH directions
+      const { data: friendsData1, error: friendsError1 } = await client
         .from('friendships')
         .select(`
           *,
@@ -254,27 +254,47 @@ function HanglightApp() {
         .eq('user_id', currentUser.id)
         .eq('status', 'accepted')
       
-      console.log('Friends data:', friendsData)
-      console.log('Friends error:', friendsError)
+      const { data: friendsData2, error: friendsError2 } = await client
+        .from('friendships')
+        .select(`
+          *,
+          user_profile:profiles!user_id(id, username, email, status_light, last_status_update)
+        `)
+        .eq('friend_id', currentUser.id)
+        .eq('status', 'accepted')
+      
+      console.log('Friends data (user_id direction):', friendsData1)
+      console.log('Friends data (friend_id direction):', friendsData2)
+      console.log('Friends errors:', friendsError1, friendsError2)
 
-      if (friendsError) {
-        console.error('Friends error:', friendsError)
+      if (friendsError1 || friendsError2) {
+        console.error('Friends error:', friendsError1, friendsError2)
         setFriends([])
         return
       }
 
-      // Format friends data
-      const formattedFriends = (friendsData || []).map(friendship => ({
-        friend_id: friendship.friend_profile?.id || friendship.friend_id,
-        username: friendship.friend_profile?.username || 'Unknown',
-        email: friendship.friend_profile?.email || '',
-        status_light: friendship.friend_profile?.status_light || 'red',
-        last_status_update: friendship.friend_profile?.last_status_update,
-        friendship_created_at: friendship.created_at
-      }))
+      // Combine both directions and format friends data
+      const allFriends = [
+        ...(friendsData1 || []).map(friendship => ({
+          friend_id: friendship.friend_profile?.id || friendship.friend_id,
+          username: friendship.friend_profile?.username || 'Unknown',
+          email: friendship.friend_profile?.email || '',
+          status_light: friendship.friend_profile?.status_light || 'red',
+          last_status_update: friendship.friend_profile?.last_status_update,
+          friendship_created_at: friendship.created_at
+        })),
+        ...(friendsData2 || []).map(friendship => ({
+          friend_id: friendship.user_profile?.id || friendship.user_id,
+          username: friendship.user_profile?.username || 'Unknown',
+          email: friendship.user_profile?.email || '',
+          status_light: friendship.user_profile?.status_light || 'red',
+          last_status_update: friendship.user_profile?.last_status_update,
+          friendship_created_at: friendship.created_at
+        }))
+      ]
 
-      console.log('Formatted friends:', formattedFriends)
-      setFriends(formattedFriends)
+      console.log('All combined friends:', allFriends)
+      setFriends(allFriends)
     } catch (error) {
       console.error('Error loading friends:', error)
       setFriends([])
