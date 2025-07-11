@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import WalletInput from './WalletInput'
 
@@ -22,7 +22,7 @@ function HanglightApp() {
   })
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+  const [statusMessage, setStatusMessage] = useState('')
 
   // Handle wallet address save
   const handleWalletSave = async (walletAddress) => {
@@ -280,6 +280,7 @@ function HanglightApp() {
           username: friendship.friend_profile?.username || 'Unknown',
           email: friendship.friend_profile?.email || '',
           status_light: friendship.friend_profile?.status_light || 'red',
+          status_message: friendship.friend_profile?.status_message || '',
           last_status_update: friendship.friend_profile?.last_status_update,
           friendship_created_at: friendship.created_at
         })),
@@ -288,6 +289,7 @@ function HanglightApp() {
           username: friendship.user_profile?.username || 'Unknown',
           email: friendship.user_profile?.email || '',
           status_light: friendship.user_profile?.status_light || 'red',
+          status_message: friendship.user_profile?.status_message || '',
           last_status_update: friendship.user_profile?.last_status_update,
           friendship_created_at: friendship.created_at
         }))
@@ -318,6 +320,23 @@ function HanglightApp() {
       setMessage('Failed to update status: ' + error.message)
     } finally {
       setIsUpdatingStatus(false)
+    }
+  }
+
+  const updateStatusMessage = async (message) => {
+    if (!supabase || !user) return
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status_message: message })
+        .eq('id', user.id)
+
+      if (error) throw error
+
+      await ensureProfileExists(user)
+    } catch (error) {
+      setMessage('Failed to update status message: ' + error.message)
     }
   }
 
@@ -526,20 +545,8 @@ function HanglightApp() {
         return
       }
 
-      setMessage('Account created, setting up profile...')
-      const profile = await ensureProfileExists(authData.user)
-      
-      if (profile) {
-        setUser(authData.user)
-        console.log('About to call loadPendingRequests after register...')
-        await loadPendingRequests()
-        await loadFriends()
-        console.log('Register loadPendingRequests completed')
-        setMessage('Welcome to Hanglight!')
-        setFormData({ email: '', password: '', username: '' })
-      } else {
-        setMessage('Account created but profile setup failed. Please try logging in.')
-      }
+      setMessage('Account created! Please check your email to verify your account.')
+      setFormData({ email: '', password: '', username: '' })
     } catch (err) {
       setMessage('Registration error: ' + err.message)
     } finally {
@@ -766,6 +773,79 @@ function HanglightApp() {
     )
   }
 
+  // Main App - Check for email verification
+  if (user && !user.email_confirmed_at) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: '#f5f1e8',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '2rem 1rem'
+      }}>
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.8)',
+          borderRadius: '24px',
+          padding: '3rem 2rem',
+          width: '100%',
+          maxWidth: '400px',
+          textAlign: 'center',
+          boxShadow: '0 8px 30px rgba(139, 90, 60, 0.15)',
+          color: '#8b5a3c',
+          border: '1px solid rgba(210, 105, 30, 0.2)'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #d2691e, #cd853f, #daa520)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            fontSize: '2.5rem',
+            fontWeight: '400',
+            margin: '0 0 1rem 0'
+          }}>
+            Check Your Email
+          </div>
+          
+          <p style={{ 
+            color: '#a0785a', 
+            margin: '0 0 2rem 0', 
+            fontSize: '1rem',
+            lineHeight: '1.5'
+          }}>
+            We sent a verification link to<br/>
+            <strong>{user.email}</strong>
+          </p>
+          
+          <p style={{ 
+            color: '#a0785a', 
+            margin: '0 0 2rem 0', 
+            fontSize: '0.9rem'
+          }}>
+            Click the link in your email to activate your account.
+          </p>
+
+          <button
+            onClick={handleLogout}
+            style={{
+              background: 'rgba(210, 105, 30, 0.1)',
+              color: '#d2691e',
+              border: '1px solid rgba(210, 105, 30, 0.3)',
+              borderRadius: '16px',
+              padding: '1rem 2rem',
+              cursor: 'pointer',
+              fontWeight: '500',
+              fontSize: '1rem'
+            }}
+          >
+            Back to Login
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // Main App
   if (user) {
     return (
@@ -974,12 +1054,27 @@ function HanglightApp() {
               ))}
             </div>
             
-            <div style={{
-              fontSize: '1.2rem',
-              color: '#8b5a3c',
-              fontWeight: '500'
-            }}>
-              {getStatusText(profile?.status_light)}
+            {/* Status message input */}
+            <div style={{ marginTop: '2rem' }}>
+              <input
+                type="text"
+                value={statusMessage}
+                onChange={(e) => setStatusMessage(e.target.value)}
+                onBlur={() => updateStatusMessage(statusMessage)}
+                placeholder="What are you up to?"
+                style={{
+                  width: '100%',
+                  maxWidth: '400px',
+                  padding: '1rem',
+                  fontSize: '1rem',
+                  border: '1px solid rgba(210, 105, 30, 0.3)',
+                  borderRadius: '16px',
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  color: '#8b5a3c',
+                  textAlign: 'center',
+                  outline: 'none'
+                }}
+              />
             </div>
           </div>
 
@@ -1059,7 +1154,7 @@ function HanglightApp() {
                     <div style={{ textAlign: 'left' }}>
                       <div style={{ fontWeight: '500', color: '#8b5a3c' }}>{friend.username}</div>
                       <div style={{ fontSize: '0.9rem', color: '#a0785a' }}>
-                        {getStatusText(friend.status_light)}
+                        {friend.status_message || getStatusText(friend.status_light)}
                       </div>
                     </div>
                   </div>
