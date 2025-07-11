@@ -114,7 +114,7 @@ function HanglightApp() {
         .single()
 
       if (existingProfile) {
-        // Update existing profile to mark as hanglight active and load status message
+        // Update existing profile to mark as hanglight active
         const { data: updatedProfile, error: updateError } = await client
           .from('profiles')
           .update({ 
@@ -148,7 +148,8 @@ function HanglightApp() {
         hanglight_active: true,
         dov_balance: 0,
         djr_balance: 0,
-        status_message: ''
+        status_message: '',
+        last_status_update: new Date().toISOString()
       }
 
       const { data: createdProfile, error: createError } = await client
@@ -253,11 +254,12 @@ function HanglightApp() {
       await checkExpiredMessages(client)
       
       // Get accepted friends from friendships table - check BOTH directions
+      // Removed references to status_message_updated_at column
       const { data: friendsData1, error: friendsError1 } = await client
         .from('friendships')
         .select(`
           *,
-          friend_profile:profiles!friend_id(id, username, email, status_light, status_message, status_message_updated_at, last_status_update)
+          friend_profile:profiles!friend_id(id, username, email, status_light, status_message, last_status_update)
         `)
         .eq('user_id', currentUser.id)
         .eq('status', 'accepted')
@@ -266,7 +268,7 @@ function HanglightApp() {
         .from('friendships')
         .select(`
           *,
-          user_profile:profiles!user_id(id, username, email, status_light, status_message, status_message_updated_at, last_status_update)
+          user_profile:profiles!user_id(id, username, email, status_light, status_message, last_status_update)
         `)
         .eq('friend_id', currentUser.id)
         .eq('status', 'accepted')
@@ -316,10 +318,14 @@ function HanglightApp() {
     
     setIsUpdatingStatus(true)
     try {
-      const { error } = await supabase.rpc('update_status_light', {
-        user_uuid: user.id,
-        new_status: newStatus
-      })
+      // Update status light and last_status_update timestamp
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          status_light: newStatus,
+          last_status_update: new Date().toISOString()
+        })
+        .eq('id', user.id)
 
       if (error) throw error
 
@@ -335,11 +341,12 @@ function HanglightApp() {
     if (!supabase || !user) return
     
     try {
+      // Update status message and timestamp using last_status_update instead of status_message_updated_at
       const { error } = await supabase
         .from('profiles')
         .update({ 
           status_message: message,
-          status_message_updated_at: new Date().toISOString()
+          last_status_update: new Date().toISOString()
         })
         .eq('id', user.id)
 
@@ -351,7 +358,7 @@ function HanglightApp() {
     }
   }
 
-  // Check and clear expired status messages
+  // Check and clear expired status messages (using last_status_update instead of status_message_updated_at)
   const checkExpiredMessages = async (client = supabase) => {
     if (!client) return
     
@@ -360,8 +367,8 @@ function HanglightApp() {
       
       const { error } = await client
         .from('profiles')
-        .update({ status_message: null, status_message_updated_at: null })
-        .lt('status_message_updated_at', twelveHoursAgo)
+        .update({ status_message: null })
+        .lt('last_status_update', twelveHoursAgo)
         .not('status_message', 'is', null)
 
       if (error) {
@@ -1017,7 +1024,7 @@ function HanglightApp() {
                     border: profile?.status_light === status ? '3px solid #d2691e' : '2px solid rgba(139, 90, 60, 0.3)',
                     backgroundColor: getStatusColor(status),
                     cursor: 'pointer',
-                    opacity: profile?.status_light === status ? 1 : 0.3, // Opaque until active
+                    opacity: profile?.status_light === status ? 1 : 0.3,
                     boxShadow: profile?.status_light === status ? '0 0 25px rgba(210, 105, 30, 0.4)' : 'none',
                     transition: 'all 0.3s ease',
                     transform: profile?.status_light === status ? 'scale(1.1)' : 'scale(1)'
@@ -1099,7 +1106,7 @@ function HanglightApp() {
               </button>
             </div>
             
-            {/* Friends List */}
+            {/* Friends List - Modified to only show status message if it exists */}
             {friends.length > 0 ? (
               friends.map(friend => (
                 <div key={friend.friend_id} style={{
@@ -1125,9 +1132,12 @@ function HanglightApp() {
                     />
                     <div style={{ textAlign: 'left' }}>
                       <div style={{ fontWeight: '500', color: '#8b5a3c' }}>{friend.username}</div>
-                      <div style={{ fontSize: '0.9rem', color: '#a0785a' }}>
-                        {friend.status_message && friend.status_message.trim() ? friend.status_message : ''}
-                      </div>
+                      {/* Only show status message if it exists and is not empty */}
+                      {friend.status_message && friend.status_message.trim() && (
+                        <div style={{ fontSize: '0.9rem', color: '#a0785a' }}>
+                          {friend.status_message}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#c4a373' }}>
