@@ -5,10 +5,6 @@ import WalletInput from './WalletInput'
 function HanglightApp() {
   const [supabase, setSupabase] = useState(null)
   const [user, setUser] = useState(null)
-
-function HanglightApp() {
-  const [supabase, setSupabase] = useState(null)
-  const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [activeTab, setActiveTab] = useState('login')
   const [showAddFriend, setShowAddFriend] = useState(false)
