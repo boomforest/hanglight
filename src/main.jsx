@@ -1165,14 +1165,15 @@ function HanglightApp() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                     <div
                       style={{
-                        width: '24px',
-                        height: '24px',
+                        width: '20px',
+                        height: '20px',
                         borderRadius: '50%',
                         backgroundColor: getStatusColor(friend.status_light),
-                        boxShadow: '0 0 10px rgba(0,0,0,0.2)'
+                        boxShadow: '0 0 8px rgba(0,0,0,0.2)',
+                        flexShrink: 0
                       }}
                     />
-                    <div style={{ textAlign: 'left' }}>
+                    <div style={{ textAlign: 'left', flex: 1 }}>
                       <div style={{ fontWeight: '500', color: '#8b5a3c' }}>{friend.username}</div>
                       {/* Only show status message if it exists and is not empty */}
                       {friend.status_message && friend.status_message.trim() && (
@@ -1182,7 +1183,7 @@ function HanglightApp() {
                       )}
                     </div>
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#c4a373' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#c4a373', flexShrink: 0 }}>
                     {formatTimeAgo(friend.last_status_update)}
                   </div>
                 </div>
