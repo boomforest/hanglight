@@ -249,12 +249,15 @@ function HanglightApp() {
     try {
       console.log('Loading friends for user:', currentUser.id)
       
+      // First check for expired messages
+      await checkExpiredMessages(client)
+      
       // Get accepted friends from friendships table - check BOTH directions
       const { data: friendsData1, error: friendsError1 } = await client
         .from('friendships')
         .select(`
           *,
-          friend_profile:profiles!friend_id(id, username, email, status_light, status_message, last_status_update)
+          friend_profile:profiles!friend_id(id, username, email, status_light, status_message, status_message_updated_at, last_status_update)
         `)
         .eq('user_id', currentUser.id)
         .eq('status', 'accepted')
@@ -263,7 +266,7 @@ function HanglightApp() {
         .from('friendships')
         .select(`
           *,
-          user_profile:profiles!user_id(id, username, email, status_light, status_message, last_status_update)
+          user_profile:profiles!user_id(id, username, email, status_light, status_message, status_message_updated_at, last_status_update)
         `)
         .eq('friend_id', currentUser.id)
         .eq('status', 'accepted')
@@ -334,7 +337,10 @@ function HanglightApp() {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ status_message: message })
+        .update({ 
+          status_message: message,
+          status_message_updated_at: new Date().toISOString()
+        })
         .eq('id', user.id)
 
       if (error) throw error
@@ -342,6 +348,27 @@ function HanglightApp() {
       await ensureProfileExists(user)
     } catch (error) {
       setMessage('Failed to update status message: ' + error.message)
+    }
+  }
+
+  // Check and clear expired status messages
+  const checkExpiredMessages = async (client = supabase) => {
+    if (!client) return
+    
+    try {
+      const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
+      
+      const { error } = await client
+        .from('profiles')
+        .update({ status_message: null, status_message_updated_at: null })
+        .lt('status_message_updated_at', twelveHoursAgo)
+        .not('status_message', 'is', null)
+
+      if (error) {
+        console.error('Error clearing expired messages:', error)
+      }
+    } catch (error) {
+      console.error('Error in checkExpiredMessages:', error)
     }
   }
 
@@ -1099,7 +1126,7 @@ function HanglightApp() {
                     <div style={{ textAlign: 'left' }}>
                       <div style={{ fontWeight: '500', color: '#8b5a3c' }}>{friend.username}</div>
                       <div style={{ fontSize: '0.9rem', color: '#a0785a' }}>
-                        {friend.status_message || getStatusText(friend.status_light)}
+                        {friend.status_message && friend.status_message.trim() ? friend.status_message : ''}
                       </div>
                     </div>
                   </div>
