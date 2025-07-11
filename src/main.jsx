@@ -1211,6 +1211,45 @@ function HanglightApp() {
           }}>
             grail // antisocial media MMXXV
           </div>
+
+          {/* Donate Button - Floating bottom right */}
+          <div style={{
+            position: 'fixed',
+            bottom: '1.5rem',
+            right: '1.5rem',
+            zIndex: 1000
+          }}>
+            <a
+              href="https://www.paypal.com/ncp/payment/LEWS26K7J8FAC"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                background: 'linear-gradient(135deg, #0070ba, #003087)',
+                color: 'white',
+                padding: '0.8rem 1.2rem',
+                borderRadius: '25px',
+                textDecoration: 'none',
+                fontSize: '0.9rem',
+                fontWeight: '500',
+                boxShadow: '0 4px 15px rgba(0, 112, 186, 0.3)',
+                transition: 'all 0.3s ease',
+                border: 'none'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)'
+                e.target.style.boxShadow = '0 6px 20px rgba(0, 112, 186, 0.4)'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0px)'
+                e.target.style.boxShadow = '0 4px 15px rgba(0, 112, 186, 0.3)'
+              }}
+            >
+              <span>donate 🕊</span>
+            </a>
+          </div>
         </div>
       </div>
     )
