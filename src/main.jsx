@@ -107,11 +107,18 @@ function HanglightApp() {
 
   const ensureProfileExists = async (authUser, client = supabase) => {
     try {
+      console.log('=== PROFILE DEBUG ===')
+      console.log('Auth user:', authUser)
+      console.log('Auth user ID:', authUser.id)
+      console.log('Auth user email:', authUser.email)
+      
       const { data: existingProfile } = await client
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
         .single()
+
+      console.log('Existing profile found:', existingProfile)
 
       if (existingProfile) {
         // Update existing profile to mark as hanglight active
@@ -129,6 +136,7 @@ function HanglightApp() {
           console.error('Error updating profile:', updateError)
           setProfile(existingProfile)
         } else {
+          console.log('Profile updated:', updatedProfile)
           setProfile(updatedProfile)
         }
         
@@ -152,6 +160,8 @@ function HanglightApp() {
         last_status_update: new Date().toISOString()
       }
 
+      console.log('Creating new profile:', newProfile)
+
       const { data: createdProfile, error: createError } = await client
         .from('profiles')
         .insert([newProfile])
@@ -159,14 +169,17 @@ function HanglightApp() {
         .single()
 
       if (createError) {
+        console.error('Profile creation error:', createError)
         setMessage('Profile creation failed: ' + createError.message)
         return null
       }
 
+      console.log('New profile created:', createdProfile)
       setProfile(createdProfile)
       setMessage('Welcome to Hanglight!')
       return createdProfile
     } catch (error) {
+      console.error('Error in ensureProfileExists:', error)
       setMessage('Error creating profile: ' + error.message)
       return null
     }
@@ -248,10 +261,27 @@ function HanglightApp() {
     if (!currentUser) return
     
     try {
+      console.log('=== LOADING FRIENDS DEBUG ===')
       console.log('Loading friends for user:', currentUser.id)
+      console.log('User email:', currentUser.email)
       
       // First check for expired messages
       await checkExpiredMessages(client)
+      
+      // Let's first check what friendships exist in the database
+      console.log('Checking ALL friendships in database...')
+      const { data: allFriendships, error: allError } = await client
+        .from('friendships')
+        .select('*')
+      
+      console.log('ALL friendships in database:', allFriendships)
+      console.log('All friendships error:', allError)
+      
+      // Check friendships involving this user
+      const userFriendships = allFriendships?.filter(f => 
+        f.user_id === currentUser.id || f.friend_id === currentUser.id
+      )
+      console.log('Friendships involving this user:', userFriendships)
       
       // Get accepted friends from friendships table - check BOTH directions
       // Removed references to status_message_updated_at column
@@ -283,6 +313,17 @@ function HanglightApp() {
         return
       }
 
+      // Let's also try a simpler query to see what we get
+      console.log('Trying simpler friendship query...')
+      const { data: simpleFriendships, error: simpleError } = await client
+        .from('friendships')
+        .select('*')
+        .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
+        .eq('status', 'accepted')
+      
+      console.log('Simple friendships query result:', simpleFriendships)
+      console.log('Simple friendships error:', simpleError)
+
       // Combine both directions and format friends data
       const allFriends = [
         ...(friendsData1 || []).map(friendship => ({
@@ -306,6 +347,7 @@ function HanglightApp() {
       ]
 
       console.log('All combined friends:', allFriends)
+      console.log('Final friends count:', allFriends.length)
       setFriends(allFriends)
     } catch (error) {
       console.error('Error loading friends:', error)
