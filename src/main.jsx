@@ -1,6 +1,10 @@
-const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import WalletInput from './WalletInput'
+
+function HanglightApp() {
+  const [supabase, setSupabase] = useState(null)
+  const [user, setUser] = useState(null)
 
 function HanglightApp() {
   const [supabase, setSupabase] = useState(null)
