@@ -64,6 +64,38 @@ function HanglightApp() {
     return `${address.slice(0, 6)}...${address.slice(-4)}`
   }
 
+  // Helper function to load user data after authentication
+  const loadUserData = async (authUser, client = supabase) => {
+    try {
+      console.log('=== LOADING USER DATA ===')
+      console.log('Loading data for user:', authUser.id)
+      
+      // First ensure profile exists
+      const profile = await ensureProfileExists(authUser, client)
+      if (!profile) {
+        console.error('Failed to create/load profile')
+        return
+      }
+
+      // Then load friends and requests in parallel
+      const [friendsResult, requestsResult] = await Promise.allSettled([
+        loadFriends(client, authUser),
+        loadPendingRequests(client, authUser)
+      ])
+
+      if (friendsResult.status === 'rejected') {
+        console.error('Failed to load friends:', friendsResult.reason)
+      }
+      if (requestsResult.status === 'rejected') {
+        console.error('Failed to load requests:', requestsResult.reason)
+      }
+
+      console.log('User data loading complete')
+    } catch (error) {
+      console.error('Error in loadUserData:', error)
+    }
+  }
+
   useEffect(() => {
     console.log('=== SUPABASE INIT STARTING ===')
     const initSupabase = async () => {
@@ -85,17 +117,32 @@ function HanglightApp() {
         if (session?.user) {
           console.log('User found in session:', session.user)
           setUser(session.user)
-          console.log('About to call ensureProfileExists...')
-          await ensureProfileExists(session.user, client)
-          console.log('About to call loadPendingRequests...')
-          // Call loadPendingRequests AFTER setUser, but pass the user directly
-          setTimeout(async () => {
-            await loadPendingRequests(client, session.user)
-            await loadFriends(client, session.user)
-          }, 100)
-          console.log('loadPendingRequests scheduled')
+          
+          // Load all user data
+          await loadUserData(session.user, client)
         } else {
           console.log('No user in session')
+        }
+
+        // Set up auth state change listener
+        const { data: { subscription } } = client.auth.onAuthStateChange(async (event, session) => {
+          console.log('Auth state change:', event, session?.user?.id)
+          
+          if (event === 'SIGNED_IN' && session?.user) {
+            setUser(session.user)
+            await loadUserData(session.user, client)
+          } else if (event === 'SIGNED_OUT') {
+            setUser(null)
+            setProfile(null)
+            setPendingRequests([])
+            setFriends([])
+            setStatusMessage('')
+          }
+        })
+
+        // Cleanup subscription on unmount
+        return () => {
+          subscription?.unsubscribe()
         }
       } catch (error) {
         console.error('Supabase init error:', error)
@@ -186,30 +233,22 @@ function HanglightApp() {
   }
 
   const loadPendingRequests = async (client = supabase, userParam = null) => {
-    console.log('=== INSIDE loadPendingRequests ===')
+    console.log('=== LOADING PENDING REQUESTS ===')
     const currentUser = userParam || user
     console.log('User check:', currentUser)
     console.log('Client check:', client)
     
-    if (!currentUser) {
-      console.log('No user, returning early')
+    if (!currentUser || !client) {
+      console.log('No user or client, returning early')
       return
     }
     
     console.log('User ID:', currentUser.id)
     
     try {
-      console.log('Querying for real friend requests...')
+      console.log('Querying for friend requests...')
       
-      // First, let's see ALL friend requests in the system
-      const { data: allRequests, error: allError } = await client
-        .from('friend_requests')
-        .select('*')
-      
-      console.log('ALL friend requests in system:', allRequests)
-      console.log('All requests error:', allError)
-      
-      // Now query for this specific user's requests
+      // Query for this specific user's requests
       const { data, error } = await client
         .from('friend_requests')
         .select(`
@@ -224,17 +263,8 @@ function HanglightApp() {
         .eq('receiver_id', currentUser.id)
         .eq('status', 'pending')
       
-      console.log('Query for receiver_id =', currentUser.id)
-      console.log('Real friend requests data:', data)
+      console.log('Friend requests data:', data)
       console.log('Friend requests error:', error)
-      
-      // Check if any requests match this user as receiver
-      if (allRequests) {
-        const matchingRequests = allRequests.filter(req => 
-          req.receiver_id === currentUser.id && req.status === 'pending'
-        )
-        console.log('Manual filter found:', matchingRequests)
-      }
       
       if (error) {
         console.error('Database error:', error)
@@ -243,10 +273,10 @@ function HanglightApp() {
       }
       
       if (data && data.length > 0) {
-        console.log('Found', data.length, 'real friend requests')
+        console.log('Found', data.length, 'friend requests')
         setPendingRequests(data)
       } else {
-        console.log('No real friend requests found')
+        console.log('No friend requests found')
         setPendingRequests([])
       }
       
@@ -257,34 +287,21 @@ function HanglightApp() {
   }
 
   const loadFriends = async (client = supabase, userParam = null) => {
+    console.log('=== LOADING FRIENDS ===')
     const currentUser = userParam || user
-    if (!currentUser) return
+    
+    if (!currentUser || !client) {
+      console.log('No user or client for loading friends')
+      return
+    }
     
     try {
-      console.log('=== LOADING FRIENDS DEBUG ===')
       console.log('Loading friends for user:', currentUser.id)
-      console.log('User email:', currentUser.email)
       
       // First check for expired messages
       await checkExpiredMessages(client)
       
-      // Let's first check what friendships exist in the database
-      console.log('Checking ALL friendships in database...')
-      const { data: allFriendships, error: allError } = await client
-        .from('friendships')
-        .select('*')
-      
-      console.log('ALL friendships in database:', allFriendships)
-      console.log('All friendships error:', allError)
-      
-      // Check friendships involving this user
-      const userFriendships = allFriendships?.filter(f => 
-        f.user_id === currentUser.id || f.friend_id === currentUser.id
-      )
-      console.log('Friendships involving this user:', userFriendships)
-      
       // Get accepted friends from friendships table - check BOTH directions
-      // Removed references to status_message_updated_at column
       const { data: friendsData1, error: friendsError1 } = await client
         .from('friendships')
         .select(`
@@ -312,17 +329,6 @@ function HanglightApp() {
         setFriends([])
         return
       }
-
-      // Let's also try a simpler query to see what we get
-      console.log('Trying simpler friendship query...')
-      const { data: simpleFriendships, error: simpleError } = await client
-        .from('friendships')
-        .select('*')
-        .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
-        .eq('status', 'accepted')
-      
-      console.log('Simple friendships query result:', simpleFriendships)
-      console.log('Simple friendships error:', simpleError)
 
       // Combine both directions and format friends data
       const allFriends = [
@@ -575,8 +581,12 @@ function HanglightApp() {
         return
       }
 
-      await loadPendingRequests()
-      await loadFriends()
+      // Reload data after accepting/declining
+      await Promise.all([
+        loadPendingRequests(),
+        loadFriends()
+      ])
+      
       setMessage(`Friend request ${response}!`)
     } catch (error) {
       console.error('Error responding to request:', error)
@@ -627,19 +637,9 @@ function HanglightApp() {
       }
 
       setMessage('Account created, setting up profile...')
-      const profile = await ensureProfileExists(authData.user)
       
-      if (profile) {
-        setUser(authData.user)
-        console.log('About to call loadPendingRequests after register...')
-        await loadPendingRequests()
-        await loadFriends()
-        console.log('Register loadPendingRequests completed')
-        setMessage('Welcome to Hanglight!')
-        setFormData({ email: '', password: '', username: '' })
-      } else {
-        setMessage('Account created but profile setup failed. Please try logging in.')
-      }
+      // The auth state change listener will handle loading user data
+      setFormData({ email: '', password: '', username: '' })
     } catch (err) {
       setMessage('Registration error: ' + err.message)
     } finally {
@@ -677,15 +677,8 @@ function HanglightApp() {
 
       console.log('Login successful, user:', data.user)
       setMessage('Login successful!')
-      setUser(data.user)
       
-      console.log('About to call ensureProfileExists after login...')
-      await ensureProfileExists(data.user)
-      console.log('About to call loadPendingRequests after login...')
-      await loadPendingRequests()
-      await loadFriends()
-      console.log('Login process complete')
-      
+      // The auth state change listener will handle loading user data
       setFormData({ email: '', password: '', username: '' })
     } catch (err) {
       console.error('Login catch error:', err)
@@ -699,16 +692,12 @@ function HanglightApp() {
     if (supabase) {
       await supabase.auth.signOut()
     }
-    setUser(null)
-    setProfile(null)
-    setPendingRequests([])
-    setFriends([])
+    // Auth state change listener will handle clearing state
     setShowAddFriend(false)
     setShowMenu(false)
     setMessage('')
     setFormData({ email: '', password: '', username: '' })
     setAddFriendData({ identifier: '', message: '' })
-    setStatusMessage('')
   }
 
   const getStatusColor = (status) => {
