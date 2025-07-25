@@ -700,7 +700,16 @@ function HanglightApp() {
 
       console.log('All combined friends:', allFriends)
       console.log('Final friends count:', allFriends.length)
-      setFriends(allFriends)
+      
+      // Sort friends by status: green first, yellow middle, red last
+      const sortedFriends = allFriends.sort((a, b) => {
+        const statusOrder = { 'green': 0, 'yellow': 1, 'red': 2 }
+        const aOrder = statusOrder[a.status_light] ?? 3
+        const bOrder = statusOrder[b.status_light] ?? 3
+        return aOrder - bOrder
+      })
+      
+      setFriends(sortedFriends)
     } catch (error) {
       console.error('Error loading friends:', error)
       setFriends([])
