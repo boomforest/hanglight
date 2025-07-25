@@ -24,6 +24,10 @@ function HanglightApp() {
   const [loading, setLoading] = useState(false)
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
+  
+  // New state for nickname functionality
+  const [editingNickname, setEditingNickname] = useState(null)
+  const [nicknameInput, setNicknameInput] = useState('')
 
   // Handle wallet address save
   const handleWalletSave = async (walletAddress) => {
@@ -302,6 +306,7 @@ function HanglightApp() {
       await checkExpiredMessages(client)
       
       // Get accepted friends from friendships table - check BOTH directions
+      // Updated to include nickname field
       const { data: friendsData1, error: friendsError1 } = await client
         .from('friendships')
         .select(`
@@ -333,22 +338,26 @@ function HanglightApp() {
       // Combine both directions and format friends data
       const allFriends = [
         ...(friendsData1 || []).map(friendship => ({
+          friendship_id: friendship.id, // Add friendship_id for nickname updates
           friend_id: friendship.friend_profile?.id || friendship.friend_id,
           username: friendship.friend_profile?.username || 'Unknown',
           email: friendship.friend_profile?.email || '',
           status_light: friendship.friend_profile?.status_light || 'red',
           status_message: friendship.friend_profile?.status_message || '',
           last_status_update: friendship.friend_profile?.last_status_update,
-          friendship_created_at: friendship.created_at
+          friendship_created_at: friendship.created_at,
+          nickname: friendship.nickname // Include nickname from friendships table
         })),
         ...(friendsData2 || []).map(friendship => ({
+          friendship_id: friendship.id, // Add friendship_id for nickname updates
           friend_id: friendship.user_profile?.id || friendship.user_id,
           username: friendship.user_profile?.username || 'Unknown',
           email: friendship.user_profile?.email || '',
           status_light: friendship.user_profile?.status_light || 'red',
           status_message: friendship.user_profile?.status_message || '',
           last_status_update: friendship.user_profile?.last_status_update,
-          friendship_created_at: friendship.created_at
+          friendship_created_at: friendship.created_at,
+          nickname: friendship.nickname // Include nickname from friendships table
         }))
       ]
 
@@ -359,6 +368,41 @@ function HanglightApp() {
       console.error('Error loading friends:', error)
       setFriends([])
     }
+  }
+
+  // New function to update nickname
+  const updateNickname = async (friendshipId, newNickname) => {
+    if (!supabase || !user) return
+
+    try {
+      const { error } = await supabase
+        .from('friendships')
+        .update({ nickname: newNickname.trim() || null })
+        .eq('id', friendshipId)
+
+      if (error) throw error
+
+      // Reload friends to show updated nickname
+      await loadFriends()
+      setEditingNickname(null)
+      setNicknameInput('')
+      setMessage('Nickname updated!')
+    } catch (error) {
+      console.error('Error updating nickname:', error)
+      setMessage('Failed to update nickname: ' + error.message)
+    }
+  }
+
+  // Function to start editing nickname
+  const startEditingNickname = (friend) => {
+    setEditingNickname(friend.friendship_id)
+    setNicknameInput(friend.nickname || friend.username)
+  }
+
+  // Function to cancel editing nickname
+  const cancelEditingNickname = () => {
+    setEditingNickname(null)
+    setNicknameInput('')
   }
 
   const updateStatusLight = async (newStatus) => {
@@ -698,6 +742,8 @@ function HanglightApp() {
     setMessage('')
     setFormData({ email: '', password: '', username: '' })
     setAddFriendData({ identifier: '', message: '' })
+    setEditingNickname(null)
+    setNicknameInput('')
   }
 
   const getStatusColor = (status) => {
@@ -1137,7 +1183,7 @@ function HanglightApp() {
               </button>
             </div>
             
-            {/* Friends List - Modified to only show status message if it exists */}
+            {/* Friends List - Updated with nickname functionality */}
             {friends.length > 0 ? (
               friends.map(friend => (
                 <div key={friend.friend_id} style={{
@@ -1163,7 +1209,93 @@ function HanglightApp() {
                       }}
                     />
                     <div style={{ textAlign: 'left', flex: 1 }}>
-                      <div style={{ fontWeight: '500', color: '#8b5a3c' }}>{friend.username}</div>
+                      {/* Nickname editing functionality */}
+                      {editingNickname === friend.friendship_id ? (
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            value={nicknameInput}
+                            onChange={(e) => setNicknameInput(e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                updateNickname(friend.friendship_id, nicknameInput)
+                              }
+                            }}
+                            style={{
+                              padding: '0.3rem 0.6rem',
+                              fontSize: '0.9rem',
+                              border: '1px solid rgba(210, 105, 30, 0.3)',
+                              borderRadius: '8px',
+                              background: 'rgba(255, 255, 255, 0.9)',
+                              color: '#8b5a3c',
+                              outline: 'none',
+                              width: '150px'
+                            }}
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => updateNickname(friend.friendship_id, nicknameInput)}
+                            style={{
+                              background: 'linear-gradient(135deg, #28a745, #20c997)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '0.3rem 0.6rem',
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                              fontWeight: '500'
+                            }}
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={cancelEditingNickname}
+                            style={{
+                              background: 'rgba(220, 53, 69, 0.1)',
+                              color: '#dc3545',
+                              border: '1px solid rgba(220, 53, 69, 0.3)',
+                              borderRadius: '6px',
+                              padding: '0.3rem 0.6rem',
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                              fontWeight: '500'
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <div 
+                          onClick={() => startEditingNickname(friend)}
+                          style={{ 
+                            fontWeight: '500', 
+                            color: '#8b5a3c',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                          }}
+                        >
+                          {friend.nickname || friend.username}
+                          {friend.nickname && (
+                            <span style={{ 
+                              fontSize: '0.8rem', 
+                              color: '#a0785a',
+                              fontWeight: '400'
+                            }}>
+                              (@{friend.username})
+                            </span>
+                          )}
+                          <span style={{ 
+                            fontSize: '0.7rem', 
+                            color: '#c4a373',
+                            opacity: 0.6
+                          }}>
+                            ✏️
+                          </span>
+                        </div>
+                      )}
+                      
                       {/* Only show status message if it exists and is not empty */}
                       {friend.status_message && friend.status_message.trim() && (
                         <div style={{ fontSize: '0.9rem', color: '#a0785a' }}>
@@ -1240,6 +1372,26 @@ function HanglightApp() {
             </a>
           </div>
         </div>
+
+        {/* Message display for nickname updates */}
+        {message && message.includes('Nickname') && (
+          <div style={{
+            position: 'fixed',
+            top: '2rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(40, 167, 69, 0.9)',
+            color: 'white',
+            padding: '1rem 2rem',
+            borderRadius: '16px',
+            fontSize: '0.9rem',
+            fontWeight: '500',
+            zIndex: 2000,
+            boxShadow: '0 4px 20px rgba(40, 167, 69, 0.3)'
+          }}>
+            {message}
+          </div>
+        )}
       </div>
     )
   }
