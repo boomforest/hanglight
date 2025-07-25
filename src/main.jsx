@@ -465,8 +465,11 @@ function HanglightApp() {
           console.log('Auth state change:', event, session?.user?.id)
           
           if (event === 'SIGNED_IN' && session?.user) {
-            setUser(session.user)
-            await loadUserData(session.user, client)
+            // Only set user if not already set (avoid duplicate calls)
+            if (!user || user.id !== session.user.id) {
+              setUser(session.user)
+              await loadUserData(session.user, client)
+            }
           } else if (event === 'SIGNED_OUT') {
             setUser(null)
             setProfile(null)
@@ -1006,17 +1009,25 @@ function HanglightApp() {
 
       if (authError) {
         setMessage('Registration failed: ' + authError.message)
+        setLoading(false)
         return
       }
 
       if (!authData.user) {
         setMessage('Registration failed: No user returned')
+        setLoading(false)
         return
       }
 
       setMessage('Account created, setting up profile...')
       
-      // The auth state change listener will handle loading user data
+      // Manually set user state for immediate response (especially on mobile)
+      if (authData.user) {
+        setUser(authData.user)
+        // Load user data immediately instead of relying only on auth state change
+        await loadUserData(authData.user, supabase)
+      }
+      
       setFormData({ email: '', password: '', username: '' })
     } catch (err) {
       setMessage('Registration error: ' + err.message)
@@ -1050,13 +1061,20 @@ function HanglightApp() {
       if (error) {
         console.error('Login error:', error)
         setMessage('Login failed: ' + error.message)
+        setLoading(false)
         return
       }
 
       console.log('Login successful, user:', data.user)
       setMessage('Login successful!')
       
-      // The auth state change listener will handle loading user data
+      // Manually set user state for immediate response (especially on mobile)
+      if (data.user) {
+        setUser(data.user)
+        // Load user data immediately instead of relying only on auth state change
+        await loadUserData(data.user, supabase)
+      }
+      
       setFormData({ email: '', password: '', username: '' })
     } catch (err) {
       console.error('Login catch error:', err)
