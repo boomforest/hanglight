@@ -2,6 +2,313 @@ import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import WalletInput from './WalletInput'
 
+// Welcome Modal Component for Hanglight
+const HanglightWelcomeModal = ({ onClose, onAddFriend }) => {
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(139, 90, 60, 0.6)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      backdropFilter: 'blur(8px)',
+      animation: 'fadeIn 0.5s ease-out'
+    }}>
+      <div style={{
+        background: 'linear-gradient(135deg, #f5f1e8 0%, #faf7f0 100%)',
+        borderRadius: '24px',
+        padding: '40px',
+        maxWidth: '500px',
+        width: '90%',
+        maxHeight: '80vh',
+        overflow: 'auto',
+        position: 'relative',
+        boxShadow: '0 20px 60px rgba(139, 90, 60, 0.25), 0 8px 24px rgba(139, 90, 60, 0.15)',
+        border: '1px solid rgba(210, 105, 30, 0.2)',
+        animation: 'slideUp 0.5s ease-out'
+      }}>
+        {/* Close button */}
+        <button 
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            background: 'none',
+            border: 'none',
+            fontSize: '28px',
+            cursor: 'pointer',
+            color: '#a0785a',
+            transition: 'color 0.3s ease',
+            padding: '5px',
+            borderRadius: '50%',
+            width: '40px',
+            height: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          onMouseOver={(e) => e.target.style.color = '#8b5a3c'}
+          onMouseOut={(e) => e.target.style.color = '#a0785a'}
+        >
+          ×
+        </button>
+
+        {/* Content */}
+        <div style={{
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          lineHeight: '1.6',
+          color: '#8b5a3c'
+        }}>
+          {/* Welcome Header */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '32px'
+          }}>
+            <div style={{
+              fontSize: '48px',
+              marginBottom: '16px',
+              filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1))'
+            }}>
+              💡
+            </div>
+            <h2 style={{
+              fontSize: '28px',
+              fontWeight: '700',
+              margin: '0 0 8px 0',
+              background: 'linear-gradient(135deg, #d2691e 0%, #cd853f 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}>
+              Welcome to Hanglight
+            </h2>
+          </div>
+
+          {/* Main description */}
+          <div style={{
+            fontSize: '17px',
+            fontStyle: 'italic',
+            marginBottom: '28px',
+            color: '#8b5a3c',
+            textAlign: 'center',
+            padding: '0 8px'
+          }}>
+            Hanglight is a feature that will shine brighter as the Grail community grows.
+          </div>
+
+          {/* Instructions Section */}
+          <div style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.6)',
+            borderRadius: '16px',
+            padding: '24px',
+            marginBottom: '28px',
+            border: '1px solid rgba(210, 105, 30, 0.2)'
+          }}>
+            <p style={{
+              fontSize: '16px',
+              fontStyle: 'italic',
+              margin: '0 0 16px 0',
+              color: '#8b5a3c',
+              lineHeight: '1.5'
+            }}>
+              Add your friends from the Grail community and use the light at the top of the app to show your vibe:
+            </p>
+          </div>
+
+          {/* Status Light Meanings */}
+          <div style={{
+            marginBottom: '32px'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: '16px',
+              padding: '16px',
+              backgroundColor: 'rgba(220, 53, 69, 0.1)',
+              borderRadius: '12px',
+              border: '1px solid rgba(220, 53, 69, 0.2)'
+            }}>
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                backgroundColor: '#dc3545',
+                marginRight: '16px',
+                flexShrink: 0,
+                boxShadow: '0 0 8px rgba(220, 53, 69, 0.3)'
+              }} />
+              <div>
+                <div style={{
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#8b5a3c',
+                  marginBottom: '4px'
+                }}>
+                  Red – Unavailable
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: '16px',
+              padding: '16px',
+              backgroundColor: 'rgba(255, 193, 7, 0.1)',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 193, 7, 0.3)'
+            }}>
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                backgroundColor: '#ffc107',
+                marginRight: '16px',
+                flexShrink: 0,
+                boxShadow: '0 0 8px rgba(255, 193, 7, 0.3)'
+              }} />
+              <div>
+                <div style={{
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#8b5a3c',
+                  marginBottom: '4px'
+                }}>
+                  Yellow – I'm in, it's good
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: '16px',
+              padding: '16px',
+              backgroundColor: 'rgba(40, 167, 69, 0.1)',
+              borderRadius: '12px',
+              border: '1px solid rgba(40, 167, 69, 0.2)'
+            }}>
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                backgroundColor: '#28a745',
+                marginRight: '16px',
+                flexShrink: 0,
+                boxShadow: '0 0 8px rgba(40, 167, 69, 0.3)'
+              }} />
+              <div>
+                <div style={{
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#8b5a3c',
+                  marginBottom: '4px'
+                }}>
+                  Green – I'm down to hang
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* How it works */}
+          <div style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.6)',
+            borderRadius: '16px',
+            padding: '24px',
+            marginBottom: '28px',
+            border: '1px solid rgba(210, 105, 30, 0.2)'
+          }}>
+            <p style={{
+              fontSize: '16px',
+              fontStyle: 'italic',
+              margin: '0',
+              color: '#8b5a3c',
+              lineHeight: '1.5'
+            }}>
+              You'll see your friends with their current light status, plus a spot to add specific plans if you want.
+            </p>
+          </div>
+
+          {/* Call to action */}
+          <div style={{
+            textAlign: 'center',
+            marginBottom: '24px'
+          }}>
+            <button
+              onClick={onAddFriend}
+              style={{
+                background: 'linear-gradient(135deg, #d2691e 0%, #cd853f 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '16px',
+                padding: '16px 32px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 8px 20px rgba(210, 105, 30, 0.3)',
+                transform: 'translateY(0)',
+                minWidth: '200px'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.transform = 'translateY(-2px)'
+                e.target.style.boxShadow = '0 12px 24px rgba(210, 105, 30, 0.4)'
+              }}
+              onMouseOut={(e) => {
+                e.target.style.transform = 'translateY(0)'
+                e.target.style.boxShadow = '0 8px 20px rgba(210, 105, 30, 0.3)'
+              }}
+            >
+              Add Your First Friend
+            </button>
+          </div>
+
+          {/* Footer message */}
+          <div style={{
+            fontSize: '15px',
+            fontStyle: 'italic',
+            textAlign: 'center',
+            color: '#a0785a',
+            lineHeight: '1.5',
+            padding: '16px',
+            backgroundColor: 'rgba(255, 255, 255, 0.4)',
+            borderRadius: '12px',
+            border: '1px solid rgba(210, 105, 30, 0.15)'
+          }}>
+            It's a simple, private way to stay connected with your 10–20 closest friends—no feeds, no noise, no strangers.
+          </div>
+        </div>
+      </div>
+
+      <style>
+        {`
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          
+          @keyframes slideUp {
+            from { 
+              opacity: 0;
+              transform: translateY(30px) scale(0.95);
+            }
+            to { 
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+          }
+        `}
+      </style>
+    </div>
+  )
+}
+
 function HanglightApp() {
   const [supabase, setSupabase] = useState(null)
   const [user, setUser] = useState(null)
@@ -28,6 +335,31 @@ function HanglightApp() {
   // New state for nickname functionality
   const [editingNickname, setEditingNickname] = useState(null)
   const [nicknameInput, setNicknameInput] = useState('')
+
+  // Welcome modal state
+  const [showWelcome, setShowWelcome] = useState(false)
+  const [hasSeenWelcome, setHasSeenWelcome] = useState(false)
+
+  // Check if should show welcome modal
+  useEffect(() => {
+    if (user && profile && !hasSeenWelcome) {
+      // Show welcome if user has no friends
+      if (friends.length === 0) {
+        // Small delay to let the main app load first
+        const timer = setTimeout(() => {
+          setShowWelcome(true)
+        }, 1000)
+        
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [user, profile, friends, hasSeenWelcome])
+
+  // Close welcome modal
+  const closeWelcome = () => {
+    setShowWelcome(false)
+    setHasSeenWelcome(true)
+  }
 
   // Handle wallet address save
   const handleWalletSave = async (walletAddress) => {
@@ -141,6 +473,8 @@ function HanglightApp() {
             setPendingRequests([])
             setFriends([])
             setStatusMessage('')
+            setShowWelcome(false)
+            setHasSeenWelcome(false)
           }
         })
 
@@ -744,6 +1078,8 @@ function HanglightApp() {
     setAddFriendData({ identifier: '', message: '' })
     setEditingNickname(null)
     setNicknameInput('')
+    setShowWelcome(false)
+    setHasSeenWelcome(false)
   }
 
   const getStatusColor = (status) => {
@@ -774,6 +1110,53 @@ function HanglightApp() {
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
     return `${Math.floor(diffInMinutes / 1440)}d ago`
+  }
+
+  // Welcome Modal View - Show if user has no friends and hasn't seen it
+  if (user && showWelcome) {
+    return (
+      <>
+        <HanglightWelcomeModal
+          onClose={closeWelcome}
+          onAddFriend={() => {
+            closeWelcome()
+            setShowAddFriend(true)
+          }}
+        />
+        {/* Render the main app behind the modal */}
+        <div style={{
+          minHeight: '100vh',
+          backgroundColor: '#f5f1e8',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          padding: '2rem 1rem',
+          position: 'relative',
+          maxWidth: '100vw',
+          overflow: 'hidden',
+          color: '#8b5a3c',
+          filter: 'blur(2px)'
+        }}>
+          <div style={{
+            maxWidth: '600px',
+            margin: '0 auto',
+            textAlign: 'center'
+          }}>
+            {/* Main title */}
+            <div style={{
+              background: 'linear-gradient(135deg, #d2691e, #cd853f, #daa520)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              fontSize: 'clamp(2.5rem, 6vw, 4rem)',
+              fontWeight: '400',
+              marginBottom: '2rem',
+              letterSpacing: '-0.02em'
+            }}>
+              hanglight
+            </div>
+          </div>
+        </div>
+      </>
+    )
   }
 
   // Add Friend Modal
@@ -1144,7 +1527,10 @@ function HanglightApp() {
               marginBottom: '2rem'
             }}>
               <button
-                onClick={() => setShowAddFriend(true)}
+                onClick={() => {
+                  closeWelcome() // Close welcome modal when adding friend
+                  setShowAddFriend(true)
+                }}
                 style={{
                   background: 'rgba(255, 255, 255, 0.6)',
                   border: '1px solid rgba(210, 105, 30, 0.2)',
